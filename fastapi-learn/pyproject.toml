@@ -1,0 +1,17 @@
+[project]
+name = "fastapi-learn"
+version = "1.0.0"
+description = "Learning FastAPI routing concepts"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.10.0",
+    "python-multipart>=0.0.20",
+]
+
+[tool.uvicorn]
+host = "127.0.0.1"
+port = 3000
+reload = true
+log-level = "info"
