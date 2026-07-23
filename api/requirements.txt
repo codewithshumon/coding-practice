@@ -3,3 +3,5 @@ uvicorn[standard]
 pydantic
 python-multipart
 pydantic-settings
+sqlalchemy
+psycopg2-binary
