@@ -1,12 +1,15 @@
-# FastAPI Learning Lab — Task Checklist
+# FastAPI Learning Lab — Task Checklist (PostgreSQL Edition)
 
 > **How to use:** Work through each group in order. Each task tells you **what to create**,
 > **what code to write**, and **how to test it** with curl or the browser.
 > Mark `[x]` as you complete each task.
+>
+> **Big change from v1:** No more fake in-memory dicts. Everything goes through a real
+> PostgreSQL database using SQLAlchemy ORM. Docker Compose spins up the DB for you.
 
 ---
 
-## Group 0 — Project Setup
+## Group 0 — Project Setup + Docker + Database
 
 ### Task 0.1: Create the project folder
 ```bash
@@ -14,35 +17,112 @@ mkdir fastapi-learn
 cd fastapi-learn
 ```
 
-### Task 0.2: Create a virtual environment
+### Task 0.2: Create docker-compose.yml
+Create `docker-compose.yml` — copy from the companion file `docker-compose.yml` in this folder.
+
+### Task 0.3: Start PostgreSQL and pgAdmin
+```bash
+docker compose up -d
+```
+
+### Task 0.4: Verify containers are running
+```bash
+docker compose ps
+```
+You should see `postgres` (healthy) and `pgadmin` running.
+
+### Task 0.5: Verify pgAdmin
+Open [http://localhost:5050](http://localhost:5050) in your browser.
+- Email: `admin@admin.com`
+- Password: `admin`
+- Add a server: host=`postgres` (container name), port=`5432`, user=`fastapi`, password=`fastapi`, database=`fastapi_learn`
+
+### Task 0.6: Create a virtual environment
 ```bash
 python3 -m venv venv
 ```
 
-### Task 0.3: Activate the virtual environment
+### Task 0.7: Activate the virtual environment
 ```bash
 source venv/bin/activate
 ```
 
-### Task 0.4: Create requirements.txt
-Create `requirements.txt` with these lines:
+### Task 0.8: Create requirements.txt
 ```
 fastapi
 uvicorn[standard]
 pydantic
+pydantic-settings
 python-multipart
+sqlalchemy
+psycopg2-binary
 ```
 
-### Task 0.5: Install dependencies
+### Task 0.9: Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Task 0.6: Create the folder structure
+### Task 0.10: Create the folder structure
 ```bash
-mkdir routes models
-touch routes/__init__.py models/__init__.py
+mkdir routes models db
+touch routes/__init__.py models/__init__.py db/__init__.py
 ```
+
+### Task 0.11: Create db/database.py — the database connection
+- Import `create_engine`, `sessionmaker` from sqlalchemy
+- Import `declarative_base` from sqlalchemy.orm
+- Create a `DATABASE_URL` pointing to `postgresql://fastapi:fastapi@localhost:5432/fastapi_learn`
+- Create `engine = create_engine(DATABASE_URL)`
+- Create `SessionLocal = sessionmaker(bind=engine)`
+- Create `Base = declarative_base()`
+
+### Task 0.12: Create db/database.py — the get_db dependency
+In the same file, add:
+- `def get_db()` — yields a session and closes it after the request
+
+### Task 0.13: Test the database connection
+Write a small script that creates a session, executes `SELECT 1`, and prints "Connected!"
+
+### Task 0.14: Create .env
+```
+HOST=127.0.0.1
+PORT=4000
+DEBUG=true
+ENVIRONMENT=development
+DATABASE_URL=postgresql://fastapi:fastapi@localhost:5432/fastapi_learn
+```
+
+### Task 0.15: Create config.py
+- Use pydantic-settings `BaseSettings`
+- Read `host`, `port`, `debug`, `database_url` from env
+- Create global `settings` object
+
+### Task 0.16: Create .env.example (committed to git)
+```
+HOST=127.0.0.1
+PORT=8000
+DEBUG=false
+ENVIRONMENT=development
+DATABASE_URL=postgresql://fastapi:fastapi@localhost:5432/fastapi_learn
+```
+
+### Task 0.17: Create .gitignore
+```
+venv/
+__pycache__/
+*.py[cod]
+.env
+*.egg-info/
+dist/
+.vscode/
+.idea/
+.DS_Store
+```
+
+### Task 0.18: Create pyproject.toml
+- Project metadata
+- `[tool.uvicorn]` with host, port, reload, log-level
 
 ---
 
@@ -57,88 +137,131 @@ touch routes/__init__.py models/__init__.py
 ### Task 1.2: Create main.py
 - Import `FastAPI`
 - Import the hello router from `routes.hello`
+- Import `settings` from `config`
+- Import `Base`, `engine` from `db.database`
 - Create `app = FastAPI()` with title, description, version
-- Register the router with `app.include_router(hello.router)`
+- Register the hello router
+- Add startup event: `Base.metadata.create_all(bind=engine)` — creates all tables on startup
 
 ### Task 1.3: Start the server
 ```bash
-uvicorn main:app --reload
+uvicorn main:app
 ```
 
 ### Task 1.4: Test — browser
-Open these URLs in your browser:
-- `http://127.0.0.1:8000/`
-- `http://127.0.0.1:8000/ping`
-- `http://127.0.0.1:8000/docs` (Swagger UI)
-- `http://127.0.0.1:8000/redoc` (ReDoc)
+- `http://127.0.0.1:4000/`
+- `http://127.0.0.1:4000/ping`
+- `http://127.0.0.1:4000/docs`
 
 ### Task 1.5: Test — curl
 ```bash
-curl http://127.0.0.1:8000/
-curl http://127.0.0.1:8000/ping
+curl http://127.0.0.1:4000/
+curl http://127.0.0.1:4000/ping
 ```
 
 ---
 
-## Group 2 — HTTP Methods (GET, POST, PUT, PATCH, DELETE)
+## Group 2 — SQLAlchemy Models + HTTP Methods (CRUD with Real DB)
 
-### Task 2.1: Create routes/http_methods.py
-- Import `APIRouter`
-- Create `router = APIRouter()`
-- Set up a fake in-memory dict `fake_db: dict[int, dict] = {}` and `_next_id = 1`
+### Task 2.1: Create models/item.py — the SQLAlchemy model
+- Import `Column`, `Integer`, `String`, `Float`, `Boolean` from sqlalchemy
+- Import `Base` from `db.database`
+- Create `class Item(Base):`
+  - `__tablename__ = "items"`
+  - `id`: Integer, primary key, index
+  - `name`: String, index
+  - `price`: Float
+  - `description`: String, nullable
+  - `in_stock`: Boolean, default True
 
-### Task 2.2: Add GET /items — list all items
-- Return all items from fake_db as a list
+### Task 2.2: Create schemas/item.py — the Pydantic schemas
+- `ItemBase`: name (str), price (float), description (Optional[str]), in_stock (bool)
+- `ItemCreate(ItemBase)`: pass
+- `ItemUpdate`: all fields Optional (for PATCH)
+- `ItemRead(ItemBase)`: id (int)
+  - Add `model_config = {"from_attributes": True}` — enables ORM mode
 
-### Task 2.3: Add GET /items/{item_id} — get one item
-- Accept `item_id: int` as a path parameter
-- Return the item or `{"error": "Item not found"}`
+### Task 2.3: Create routes/items.py — full CRUD
+- Import `APIRouter`, `Depends`, `HTTPException`, `status`
+- Import `Session` from sqlalchemy.orm
+- Import `get_db` from `db.database`
+- Create `router = APIRouter(prefix="/items", tags=["Items"])`
 
-### Task 2.4: Add POST /items — create an item
-- Accept `name: str` and `price: float` as query parameters
-- Create a new item dict, store it, increment `_next_id`
-- Return the new item
+### Task 2.4: Add GET /items — list all items
+- Inject `db: Session = Depends(get_db)`
+- Query all items: `db.query(Item).all()`
+- Return the list
 
-### Task 2.5: Add PUT /items/{item_id} — full replace
-- Accept `item_id: int` (path) and `name: str`, `price: float` (query)
-- Replace the entire item, return it
+### Task 2.5: Add GET /items/{item_id} — get one item
+- Query by id: `db.query(Item).filter(Item.id == item_id).first()`
+- If None, `raise HTTPException(status_code=404, detail="Item not found")`
+- Return the item
 
-### Task 2.6: Add PATCH /items/{item_id} — partial update
-- Accept `item_id: int` (path) and `name: str | None = None`, `price: float | None = None`
-- Only update the fields that are provided (not None)
+### Task 2.6: Add POST /items — create an item
+- Accept `item_in: ItemCreate` as JSON body
+- Create SQLAlchemy Item: `db_item = Item(**item_in.model_dump())`
+- `db.add(db_item)`, `db.commit()`, `db.refresh(db_item)`
+- Return the created item with status 201
 
-### Task 2.7: Add DELETE /items/{item_id} — remove
-- Accept `item_id: int`, remove from dict, return deleted item
+### Task 2.7: Add PUT /items/{item_id} — full replace
+- Accept `item_in: ItemCreate` as JSON body
+- Find item by id, raise 404 if not found
+- Update ALL fields from item_in
+- `db.commit()`, `db.refresh()`
+- Return updated item
 
-### Task 2.8: Register the router in main.py
+### Task 2.8: Add PATCH /items/{item_id} — partial update
+- Accept `item_in: ItemUpdate` as JSON body
+- Find item by id, raise 404 if not found
+- Only update fields that are NOT None: `item_in.model_dump(exclude_unset=True)`
+- `db.commit()`, `db.refresh()`
+- Return updated item
+
+### Task 2.9: Add DELETE /items/{item_id} — remove
+- Find item by id, raise 404 if not found
+- `db.delete(item)`, `db.commit()`
+- Return 204 No Content
+
+### Task 2.10: Register in main.py
 ```python
-from routes import http_methods
-app.include_router(http_methods.router)
+from routes import items
+app.include_router(items.router)
 ```
 
-### Task 2.9: Test — curl (do these in order)
+### Task 2.11: Test the full CRUD
 ```bash
 # Create
-curl -X POST "http://127.0.0.1:8000/items?name=Laptop&price=999"
-curl -X POST "http://127.0.0.1:8000/items?name=Phone&price=699"
+curl -X POST http://127.0.0.1:4000/items \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Laptop", "price": 999.0}'
+
+curl -X POST http://127.0.0.1:4000/items \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Phone", "price": 699.0}'
 
 # List
-curl http://127.0.0.1:8000/items
+curl http://127.0.0.1:4000/items
 
 # Get one
-curl http://127.0.0.1:8000/items/1
+curl http://127.0.0.1:4000/items/1
 
-# Partial update (PATCH)
-curl -X PATCH "http://127.0.0.1:8000/items/1?name=GamingLaptop"
+# Partial update (only name)
+curl -X PATCH http://127.0.0.1:4000/items/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Gaming Laptop"}'
 
-# Full replace (PUT)
-curl -X PUT "http://127.0.0.1:8000/items/1?name=Tablet&price=399"
+# Full replace
+curl -X PUT http://127.0.0.1:4000/items/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Tablet", "price": 399.0}'
 
 # Delete
-curl -X DELETE http://127.0.0.1:8000/items/1
+curl -X DELETE http://127.0.0.1:4000/items/1
 
 # Verify deleted
-curl http://127.0.0.1:8000/items
+curl http://127.0.0.1:4000/items
+
+# Open pgAdmin at http://localhost:5050 and check the items table!
 ```
 
 ---
@@ -150,114 +273,88 @@ curl http://127.0.0.1:8000/items
 
 ### Task 3.2: Add GET /users/{user_id} — int path param
 - `user_id: int` — return it and its Python type
-- Test with: `curl http://127.0.0.1:8000/users/42`
-- Test with: `curl http://127.0.0.1:8000/users/abc` (see the 422 error)
+- Test: `curl http://127.0.0.1:4000/users/42`
+- Test: `curl http://127.0.0.1:4000/users/abc` (422 error)
 
 ### Task 3.3: Add GET /users/{username}/profile — string path param
 - `username: str` — return a profile dict
-- Test with: `curl http://127.0.0.1:8000/users/alice/profile`
+- Test: `curl http://127.0.0.1:4000/users/alice/profile`
 
 ### Task 3.4: Add GET /orgs/{org}/repos/{repo} — multiple params
 - `org: str`, `repo: str` — return both
-- Test with: `curl http://127.0.0.1:8000/orgs/microsoft/repos/vscode`
+- Test: `curl http://127.0.0.1:4000/orgs/microsoft/repos/vscode`
 
 ### Task 3.5: Add an Enum for category — constrained choices
-- Create `class Category(str, Enum)` with values: `books`, `movies`, `music`
+- `class Category(str, Enum)` with values: `books`, `movies`, `music`
 - Add `GET /catalog/{category}` where `category: Category`
-- Test with: `curl http://127.0.0.1:8000/catalog/books` → works
-- Test with: `curl http://127.0.0.1:8000/catalog/games` → 422 error
+- Test: `curl http://127.0.0.1:4000/catalog/books` → works
+- Test: `curl http://127.0.0.1:4000/catalog/games` → 422 error
 
 ### Task 3.6: Register in main.py and test all
 
 ---
 
-## Group 4 — Query Parameters
+## Group 4 — Query Parameters (with Real DB Filtering)
 
 ### Task 4.1: Create routes/query_params.py
-- Import `APIRouter`, `Query`
-- Create a fake list of items (list of dicts with id, name, price, in_stock)
+- Import `APIRouter`, `Query`, `Depends`
+- Import `Session`, `get_db`, `Item` model, `ItemRead` schema
 
 ### Task 4.2: Add GET /search — required + default query params
 - `q: str` (required), `page: int = 1` (default)
-- Test: `curl "http://127.0.0.1:8000/search?q=laptop"`
-- Test: `curl "http://127.0.0.1:8000/search?q=laptop&page=2"`
-- Test: `curl "http://127.0.0.1:8000/search"` → 422 (missing required q)
+- Test: `curl "http://127.0.0.1:4000/search?q=laptop"`
+- Test: `curl "http://127.0.0.1:4000/search"` → 422
 
-### Task 4.3: Add GET /filter — optional query params
-- `name: str | None = None`, `max_price: float | None = None`
-- Filter the items list based on which params are provided
-- Test: `curl "http://127.0.0.1:8000/filter"`
-- Test: `curl "http://127.0.0.1:8000/filter?max_price=500"`
-- Test: `curl "http://127.0.0.1:8000/filter?name=Laptop"`
-- Test: `curl "http://127.0.0.1:8000/filter?name=Laptop&max_price=1000"`
+### Task 4.3: Add GET /items/filter — DB-backed filtering
+- `name: str | None = None`, `max_price: float | None = None`, `in_stock: bool | None = None`
+- Build the query dynamically:
+  - Start with `query = db.query(Item)`
+  - `if name: query = query.filter(Item.name.ilike(f"%{name}%"))`
+  - `if max_price is not None: query = query.filter(Item.price <= max_price)`
+  - `if in_stock is not None: query = query.filter(Item.in_stock == in_stock)`
+- Execute and return results
+- Test each combination of filters
 
-### Task 4.4: Add GET /items — validated query params with Query()
+### Task 4.4: Add GET /items — validated pagination
 - `skip: int = Query(0, ge=0)`, `limit: int = Query(10, ge=1, le=100)`
-- Test: `curl "http://127.0.0.1:8000/items?skip=2&limit=3"`
-- Test: `curl "http://127.0.0.1:8000/items?limit=200"` → 422 error
+- Use `db.query(Item).offset(skip).limit(limit).all()`
+- Test: `curl "http://127.0.0.1:4000/items?skip=0&limit=2"`
+- Test: `curl "http://127.0.0.1:4000/items?limit=200"` → 422
 
-### Task 4.5: Add GET /items/available — boolean query param
+### Task 4.5: Add GET /items/available — boolean query
 - `in_stock: bool = True`
-- Test: `curl "http://127.0.0.1:8000/items/available?in_stock=false"`
-- Test: `curl "http://127.0.0.1:8000/items/available?in_stock=yes"` (yes/true/1/on all = True)
+- Filter in DB
+- Test: `curl "http://127.0.0.1:4000/items/available?in_stock=false"`
 
 ### Task 4.6: Add GET /items/by-ids — list query param
-- `ids: list[int] = Query([])` — same key repeated builds a list
-- Test: `curl "http://127.0.0.1:8000/items/by-ids?ids=1&ids=3&ids=5"`
+- `ids: list[int] = Query([])`
+- Use `Item.id.in_(ids)`
+- Test: `curl "http://127.0.0.1:4000/items/by-ids?ids=1&ids=3"`
 
 ### Task 4.7: Register in main.py and test all
 
 ---
 
-## Group 5 — Request Body (Pydantic Models)
+## Group 5 — Request Body (Pydantic Models with DB)
 
 ### Task 5.1: Create routes/request_body.py
-- Import `APIRouter`, `BaseModel`, `Field` from pydantic
+- Import `APIRouter`, `Depends`
+- Import Pydantic `BaseModel`, `Field`
+- Import `Session`, `get_db`
 
-### Task 5.2: Define an Item model
-```python
-class Item(BaseModel):
-    name: str
-    price: float
-    description: str | None = None
-    tax: float | None = None
-```
+### Task 5.2: Create a User SQLAlchemy model
+In `models/user.py`:
+- `class User(Base)`: id, username, email, hashed_password, is_admin
+- Create matching Pydantic schemas in `schemas/user.py`
 
-### Task 5.3: Add POST /items — accept JSON body
-- Accept `item: Item` as the request body
-- FastAPI auto-parses JSON into an Item object
-- Test with curl sending JSON body:
-```bash
-curl -X POST http://127.0.0.1:8000/items \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Laptop", "price": 999.0}'
-```
-- Test validation error (missing required field):
-```bash
-curl -X POST http://127.0.0.1:8000/items \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Laptop"}'
-```
-- Test validation error (wrong type):
-```bash
-curl -X POST http://127.0.0.1:8000/items \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Laptop", "price": "cheap"}'
-```
+### Task 5.3: Define nested Pydantic models (without DB for demo)
+- `Address` model: street, city, zip_code
+- `UserWithAddress` model: name, email, address (nested), tags (list)
+- `POST /users/register` — accepts the nested body, returns it
 
-### Task 5.4: Add a model with Field() validation
-- Create `ItemCreate` model using `Field(...)` with `gt`, `min_length`, `max_length`
-- Add a new endpoint that uses this stricter model
-- Test with empty name → 422
-- Test with negative price → 422
-
-### Task 5.5: Add a nested model (User with Address)
-- Create `Address` model: `street`, `city`, `zip_code`
-- Create `UserIn` model: `name`, `email`, `address: Address`, `tags: list[str]`
-- Add `POST /users` endpoint
-- Test with nested JSON:
+### Task 5.4: Test nested JSON
 ```bash
-curl -X POST http://127.0.0.1:8000/users \
+curl -X POST http://127.0.0.1:4000/users/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Alice",
@@ -267,70 +364,56 @@ curl -X POST http://127.0.0.1:8000/users \
       "city": "Springfield",
       "zip_code": "62701"
     },
-    "tags": ["admin"]
+    "tags": ["admin", "beta"]
   }'
 ```
 
-### Task 5.6: Register in main.py and test via /docs (easier for complex JSON!)
+### Task 5.5: Register in main.py and test via /docs
 
 ---
 
-## Group 6 — Response Models
+## Group 6 — Response Models (with DB)
 
 ### Task 6.1: Create routes/response_models.py
-- Import `APIRouter`, `BaseModel`
+- Use existing `ItemRead` as `response_model`
+- Show how DB model fields get filtered through the Pydantic schema
 
-### Task 6.2: Define internal vs public models
-- `UserInDB`: id, username, email, hashed_password, is_admin
-- `UserOut`: username, email (safe fields only)
-- Create a fake users dict
+### Task 6.2: Add GET /items with response_model=list[ItemRead]
+- Query DB, return items — each is filtered through ItemRead
 
-### Task 6.3: Add GET /users/{user_id} with response_model=UserOut
-- The `hashed_password` and `is_admin` are stripped from the response
-- Test: `curl http://127.0.0.1:8000/users/1` — notice missing fields
+### Task 6.3: Add GET /items/{item_id} with response_model=ItemRead
+- Only fields defined in ItemRead make it to the response
+- If your DB model has extra internal fields, they're stripped
 
-### Task 6.4: Add GET /users/{user_id}/admin with response_model_exclude
-- Use `response_model=UserInDB, response_model_exclude={"hashed_password"}`
-- Test: `curl http://127.0.0.1:8000/users/1/admin`
+### Task 6.4: Add response_model_exclude_none endpoint
+- Create an item with some None fields
+- Compare response with/without `response_model_exclude_none=True`
 
-### Task 6.5: Add response_model_exclude_none
-- Create an endpoint with `response_model_exclude_none=True`
-- Fields with `None` values are omitted from the JSON entirely
-- Test: compare two endpoints — one with exclude_none, one without
-
-### Task 6.6: Return a list with response_model=list[SomeModel]
-- Add `GET /items` returning `list[ItemSummary]`
-- Each item is filtered to match ItemSummary
-
-### Task 6.7: Register in main.py and test all
+### Task 6.5: Register in main.py and test all
 
 ---
 
 ## Group 7 — Headers & Cookies
 
+Same as before — no DB needed for these concepts.
+
 ### Task 7.1: Create routes/headers_cookies.py
-- Import `APIRouter`, `Header`, `Cookie`, `Response`
-- Import `Annotated` from typing
+- Import `APIRouter`, `Header`, `Cookie`, `Response`, `Annotated`
 
-### Task 7.2: Add GET /whoami — read User-Agent header
-- `user_agent: Annotated[str | None, Header()] = None`
-- Test: `curl -H "User-Agent: MyApp/1.0" http://127.0.0.1:8000/whoami`
+### Task 7.2: Add GET /whoami — read User-Agent
+- Test: `curl -H "User-Agent: MyApp/1.0" http://127.0.0.1:4000/whoami`
 
-### Task 7.3: Add GET /custom — read custom header
-- Read `X-Request-Id` header
-- Test: `curl -H "X-Request-Id: abc-123" http://127.0.0.1:8000/custom`
+### Task 7.3: Add GET /custom — read X-Request-Id header
+- Test: `curl -H "X-Request-Id: abc-123" http://127.0.0.1:4000/custom`
 
-### Task 7.4: Add GET /read-cookie — read a cookie
-- `session_id: Annotated[str | None, Cookie()] = None`
-- Test: `curl -b "session_id=hello123" http://127.0.0.1:8000/read-cookie`
+### Task 7.4: Add GET /read-cookie
+- Test: `curl -b "session_id=hello123" http://127.0.0.1:4000/read-cookie`
 
-### Task 7.5: Add GET /set-cookie — set a cookie in response
-- Accept `response: Response` and use `response.set_cookie(...)`
-- Test: `curl -v http://127.0.0.1:8000/set-cookie` (look for Set-Cookie header)
+### Task 7.5: Add GET /set-cookie — set response cookie
+- Test: `curl -v http://127.0.0.1:4000/set-cookie`
 
-### Task 7.6: Add GET /set-headers — set custom response headers
-- Use `response.headers["X-Custom"] = "value"`
-- Test: `curl -v http://127.0.0.1:8000/set-headers`
+### Task 7.6: Add GET /set-headers — custom response headers
+- Test: `curl -v http://127.0.0.1:4000/set-headers`
 
 ### Task 7.7: Register in main.py and test all
 
@@ -341,23 +424,18 @@ curl -X POST http://127.0.0.1:8000/users \
 ### Task 8.1: Create routes/status_codes.py
 - Import `APIRouter`, `Response`, `status`
 
-### Task 8.2: Add POST /items with status_code=201
-- Use `status_code=status.HTTP_201_CREATED` in the decorator
-- Test: `curl -v -X POST "http://127.0.0.1:8000/items?name=A&price=10"` (look for 201)
+### Task 8.2: Add POST /products with status_code=201
+- Use existing Item model
+- Test: `curl -v -X POST http://127.0.0.1:4000/products ...` → 201
 
-### Task 8.3: Add endpoint with dynamic status code
-- Accept `response: Response` and set `response.status_code` conditionally
-- Return 200 if item exists, 201 if created
-- Test each case and check the status code
+### Task 8.3: Dynamic status code (200 if exists, 201 if created)
+- Check DB, set `response.status_code` accordingly
 
-### Task 8.4: Add DELETE with 204 No Content
-- Use `status_code=status.HTTP_204_NO_CONTENT`
-- Even if you return something, the body is empty for 204
-- Test: `curl -v -X DELETE http://127.0.0.1:8000/items/1`
+### Task 8.4: DELETE returns 204 No Content
+- `status_code=status.HTTP_204_NO_CONTENT`
 
-### Task 8.5: Add a redirect (301)
-- Return a Response with `status_code=301` and `headers={"Location": "/new-path"}`
-- Test: `curl -v http://127.0.0.1:8000/old-path` (follow redirect, see you land on /new-path)
+### Task 8.5: 301 redirect
+- `Response(status_code=301, headers={"Location": "/new-path"})`
 
 ### Task 8.6: Register in main.py and test all
 
@@ -366,345 +444,243 @@ curl -X POST http://127.0.0.1:8000/users \
 ## Group 9 — Form Data & File Uploads
 
 ### Task 9.1: Create routes/form_files.py
-- Import `APIRouter`, `Form`, `UploadFile`, `File`
-- Import `Annotated`
+- Import `APIRouter`, `Form`, `UploadFile`, `File`, `Annotated`
 
 ### Task 9.2: Add POST /login — form data
-- Accept `username: Annotated[str, Form()]` and `password: Annotated[str, Form()]`
-- Test (form-encoded, NOT JSON):
-```bash
-curl -X POST http://127.0.0.1:8000/login \
-  -d "username=alice&password=secret"
-```
+- `username: Annotated[str, Form()]`, `password: Annotated[str, Form()]`
+- Test: `curl -X POST http://127.0.0.1:4000/login -d "username=alice&password=secret"`
 
 ### Task 9.3: Add POST /upload — single file
 - `file: UploadFile = File(...)`
-- Read with `await file.read()`, return filename, content_type, size
-- Create a test file: `echo "hello world" > test.txt`
-- Test:
-```bash
-curl -X POST http://127.0.0.1:8000/upload \
-  -F "file=@test.txt"
-```
+- Read contents, return filename + size
+- Test: `curl -X POST http://127.0.0.1:4000/upload -F "file=@test.txt"`
 
 ### Task 9.4: Add POST /upload-multiple — multiple files
 - `files: list[UploadFile] = File(...)`
-- Loop through and read each
-- Test:
-```bash
-curl -X POST http://127.0.0.1:8000/upload-multiple \
-  -F "files=@test.txt" -F "files=@test2.txt"
-```
+- Test: `curl -X POST http://127.0.0.1:4000/upload-multiple -F "files=@a.txt" -F "files=@b.txt"`
 
-### Task 9.5: Add POST /profile — form + file together
-- `name: Annotated[str, Form()]` + `avatar: UploadFile = File(...)`
-- Test:
-```bash
-curl -X POST http://127.0.0.1:8000/profile \
-  -F "name=Alice" -F "avatar=@test.txt"
-```
+### Task 9.5: Add POST /profile — form + file
+- `name: Annotated[str, Form()]` + `avatar: UploadFile`
+- Test: `curl -X POST http://127.0.0.1:4000/profile -F "name=Alice" -F "avatar=@photo.png"`
 
 ### Task 9.6: Register in main.py and test all
 
 ---
 
-## Group 10 — Dependencies (Depends)
+## Group 10 — Dependencies (Database Dependency + Auth)
 
-### Task 10.1: Create routes/dependencies.py
-- Import `APIRouter`, `Depends`, `HTTPException`, `Header`, `Query`
-- Import `Annotated`
+### Task 10.1: You already have get_db! That's a dependency.
 
-### Task 10.2: Create a shared pagination dependency
-- `def get_pagination(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100))`
-- Returns `{"offset": (page-1)*page_size, "limit": page_size}`
-- Use it in a route: `pagination: Annotated[dict, Depends(get_pagination)]`
-- Test: `curl "http://127.0.0.1:8000/posts?page=2&page_size=5"`
+### Task 10.2: Create a pagination dependency
+- `def get_pagination(page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100)) -> dict`
+- Use with `Depends(get_pagination)` alongside `Depends(get_db)`
 
-### Task 10.3: Create an API key guard dependency
+### Task 10.3: Multiple dependencies in one route
+```python
+@router.get("/items")
+def list_items(
+    db: Session = Depends(get_db),
+    pagination: dict = Depends(get_pagination),
+):
+    return db.query(Item).offset(pagination["offset"]).limit(pagination["limit"]).all()
+```
+
+### Task 10.4: Create an API key guard dependency
 - Read `X-API-Key` header, raise 401 if invalid
-- Protect a `/secure-data` endpoint with it
-- Test without header: `curl http://127.0.0.1:8000/secure-data` → 422 or 401
-- Test with wrong key: `curl -H "X-API-Key: wrong" http://127.0.0.1:8000/secure-data` → 401
-- Test with correct key: `curl -H "X-API-Key: secret-key-123" http://127.0.0.1:8000/secure-data` → 200
+- `def verify_api_key(x_api_key: Annotated[str, Header()]) -> str`
 
-### Task 10.4: Create a class-based dependency (Database)
-- Create a Database class with `all()` and `get()` methods
-- Create `get_db()` that returns a db instance
-- Use it: `db: Annotated[Database, Depends(get_db)]`
-- Test: `curl http://127.0.0.1:8000/todos`
+### Task 10.5: Create nested dependency — require admin
+- Depends on `verify_api_key`, also checks role
+- Protect admin routes with it
 
-### Task 10.5: Create nested dependencies (3 levels deep)
-- Level 1: `get_current_user` — extracts user from API key header
-- Level 2: `require_admin` — takes Level 1's output, checks role == "admin", raises 403 if not
-- Level 3: Route uses `require_admin` as its dependency
-- Test with admin key → works
-- Test with non-admin key → 403
-
-### Task 10.6: Register in main.py and test all
+### Task 10.6: Test all combinations
 
 ---
 
 ## Group 11 — Error Handling
 
 ### Task 11.1: Create routes/error_handling.py
-- Import `APIRouter`, `HTTPException`
+- Add DB-backed endpoints that raise HTTPException properly
 
-### Task 11.2: Add GET /items/{item_id} — raise 404
-- If item not found: `raise HTTPException(status_code=404, detail="Item X not found")`
-- Test: `curl http://127.0.0.1:8000/items/999` (status 404)
+### Task 11.2: Try getting a non-existent item → 404 from the DB query
 
-### Task 11.3: Add GET /divide — raise 400 for business logic
-- If `b == 0`: `raise HTTPException(status_code=400, detail="Cannot divide by zero")`
-- Test: `curl "http://127.0.0.1:8000/divide?a=10&b=0"` (status 400)
+### Task 11.3: Custom exception class + handler
+- `class ItemNotFoundError(Exception)`
+- Register custom handler in main.py with `app.add_exception_handler()`
 
-### Task 11.4: Create a custom exception class
-- `class ItemNotFoundError(Exception):` with `item_id` attribute
-- Add a route that raises it when item not found
-
-### Task 11.5: Create a custom exception handler in a separate file
-- In `custom_handlers.py`, create a handler function that catches `ItemNotFoundError`
-- Returns a JSONResponse with 404 and structured error body
-- Register it in main.py: `app.add_exception_handler(ItemNotFoundError, handler)`
-
-### Task 11.6: Register in main.py and test the custom handler
+### Task 11.4: Test: 404, 400, 500
 
 ---
 
 ## Group 12 — Middleware
 
 ### Task 12.1: Create custom_middleware.py
-- Import `BaseHTTPMiddleware` from starlette
-- Create a `TimerMiddleware` class:
-  - `dispatch(self, request, call_next)` — async
-  - Record start time before `call_next(request)`
-  - Add `X-Response-Time-ms` header after
-  - Print/log the request method, path, duration, status
+- Request timer middleware
+- Add `X-Request-Id` and `X-Response-Time-ms` headers
 
-### Task 12.2: Create routes/middleware_demo.py
-- Add a few simple endpoints: `/fast`, `/slow` (with `time.sleep(1)`), `/error` (raises ValueError)
+### Task 12.2: Register in main.py
 
-### Task 12.3: Register middleware in main.py
-```python
-from custom_middleware import TimerMiddleware
-app.add_middleware(TimerMiddleware)
-```
+### Task 12.3: Add CORS middleware
 
-### Task 12.4: Test middleware
-- `curl -v http://127.0.0.1:8000/fast` — look for `X-Response-Time-ms` header
-- `curl -v http://127.0.0.1:8000/slow` — higher response time
-- Watch terminal logs for printed request info
-
-### Task 12.5: Try built-in CORS middleware
-- Add `CORSMiddleware` in main.py with `allow_origins=["*"]`
+### Task 12.4: Test: `curl -v` to see headers
 
 ---
 
 ## Group 13 — Background Tasks
 
 ### Task 13.1: Create routes/background_tasks.py
-- Import `APIRouter`, `BackgroundTasks`
-- Create some simulated slow functions: `send_welcome_email(email, username)`, `write_audit_log(action, user)`
-- Each should `time.sleep()` and print something
+- Simulated email sending, audit logging
+- Fire tasks after DB operations
 
-### Task 13.2: Add POST /register with background task
-- Accept `BackgroundTasks` in the route
-- Call `bg.add_task(send_welcome_email, email, username)`
-- Return success immediately — email is sent in background
-- Test: `curl -X POST "http://127.0.0.1:8000/register?email=a@b.com&username=alice"`
-- Notice: response is instant, but watch terminal for the "email sent" print 2 seconds later
+### Task 13.2: On item creation, background-task an email notification
 
-### Task 13.3: Add POST /purchase with multiple background tasks
-- Fire 2+ tasks: audit log + analytics
-- Test and watch terminal
-
-### Task 13.4: Register in main.py and test all
+### Task 13.3: Test: response is instant, logs appear after
 
 ---
 
 ## Group 14 — WebSockets
 
 ### Task 14.1: Create routes/websocket_demo.py
-- Import `APIRouter`, `WebSocket`, `WebSocketDisconnect`
+- Echo WebSocket
+- Chat room WebSocket with ConnectionManager
+- Real-time clock WebSocket
 
-### Task 14.2: Add WebSocket /ws/echo
-- `@router.websocket("/ws/echo")`
-- `async def echo(websocket: WebSocket)`
-- `await websocket.accept()` then loop: `receive_text()` → `send_text(f"Echo: {data}")`
-- Catch `WebSocketDisconnect`
-
-### Task 14.3: Test the echo WebSocket
-In your browser console (on any page, like /docs):
-```js
-let ws = new WebSocket("ws://127.0.0.1:8000/ws/echo");
-ws.onmessage = e => console.log("Server:", e.data);
-ws.onopen = () => ws.send("Hello from browser!");
-```
-Or use `websocat` if you have it:
-```bash
-echo "hello" | websocat ws://127.0.0.1:8000/ws/echo
-```
-
-### Task 14.4: Add WebSocket /ws/chat/{room}/{username}
-- Create a `ConnectionManager` class that tracks active connections per room
-- Accept connection, broadcast join/leave messages, broadcast chat messages
-- Test: open two browser tabs, connect to same room, send messages
-
-### Task 14.5: Add WebSocket /ws/clock — push JSON every second
-- Use `await asyncio.sleep(1)` in a loop
-- `await websocket.send_json({"time": ...})`
-- Test in browser console
-
-### Task 14.6: Register in main.py and test all
+### Task 14.2: Test with browser console
 
 ---
 
-## Group 15 — Advanced Routing (APIRouter, Prefixes, Tags)
+## Group 15 — Advanced Routing (Prefixes, Tags, Nesting)
 
-### Task 15.1: Create routes/advanced_routing.py
-- Import `APIRouter`, `Depends`, `HTTPException`, `Query`
+### Task 15.1: Organize item routes under `/api/v1/items`
 
-### Task 15.2: Create a public router with prefix and tags
-```python
-public_router = APIRouter(
-    prefix="/v1",
-    tags=["Public"],
-    responses={404: {"description": "Not found"}},
-)
-```
-- Add `GET /health` (becomes `/v1/health`)
-- Add `GET /products` with optional category filter
+### Task 15.2: Create admin routes under `/api/v1/admin`
+- Protected by router-level dependency
 
-### Task 15.3: Create a private router with router-level dependency
-```python
-private_router = APIRouter(
-    prefix="/v1/admin",
-    tags=["Admin"],
-    dependencies=[Depends(verify_admin_key)],
-)
-```
-- Create a `verify_admin_key` dependency (checks `x_admin_key` query param)
-- Add `GET /stats` and `GET /users` endpoints
-- Every route in this router is automatically protected
+### Task 15.3: Nest everything under a parent router
 
-### Task 15.4: Nest routers inside a parent router
-```python
-router = APIRouter(prefix="/api")
-router.include_router(public_router)    # → /api/v1/*
-router.include_router(private_router)   # → /api/v1/admin/*
-```
-- Add a `GET /version` directly on the parent router (becomes `/api/version`)
-
-### Task 15.5: Register the parent router in main.py
-```python
-from routes import advanced_routing
-app.include_router(advanced_routing.router)
-```
-
-### Task 15.6: Test the URL hierarchy
-```bash
-curl http://127.0.0.1:8000/api/v1/health
-curl "http://127.0.0.1:8000/api/v1/products?category=electronics"
-curl "http://127.0.0.1:8000/api/v1/admin/stats?x_admin_key=admin-secret"
-curl "http://127.0.0.1:8000/api/v1/admin/stats"  # → 403 forbidden
-curl http://127.0.0.1:8000/api/version
-```
-
-### Task 15.7: Open /docs and see how tags group the endpoints
-- Public endpoints appear under "Public" tag
-- Admin endpoints appear under "Admin" tag
+### Task 15.4: Test the URL hierarchy
 
 ---
 
-## Group 16 — Create Shared Models (Optional)
+## Group 16 — Build Your Own (Database-Backed)
 
-### Task 16.1: Create models/schemas.py
-- Define reusable models: `UserBase`, `UserCreate`, `UserRead`
-- Define a `PaginatedResponse` generic model
-- Import and use these in multiple route files instead of redefining models
+Now combine everything into a real database-backed API.
 
----
-
-## Group 17 — Build Your Own Mini Project
-
-Now combine everything into a small real API. Pick one:
-
-### Option A: Todo API
+### Option A: Todo API with PostgreSQL
 - CRUD for todos (id, title, done, created_at)
-- Filter by `done` status (query param)
-- Pagination (skip/limit)
-- Proper status codes (201 for create, 204 for delete)
-- Response model that hides any internal fields
-- Background task that logs todo completion
+- SQLAlchemy model + Pydantic schemas
+- Filter by done status (query param → DB filter)
+- Pagination (offset/limit)
+- Proper status codes (201, 204)
+- Background task on completion
 
-### Option B: Blog API
-- CRUD for posts (id, title, body, author, published_at, tags)
-- List posts with pagination + tag filter
-- Search posts by keyword (query param)
-- File upload for post images
-- Protected admin routes for create/update/delete (API key guard)
-- Nested comments (path: `/posts/{id}/comments`)
+### Option B: Blog API with PostgreSQL
+- Posts (id, title, body, author, published_at) + SQLAlchemy
+- Comments (id, post_id, body, author) — relationship!
+- List with pagination + tag filter
+- File upload for images
+- Protected admin routes (API key guard)
 
-### Option C: URL Shortener
-- POST to create short URL (accept long URL in JSON body, return short code)
-- GET /{code} redirects to original URL (use 302 redirect)
-- GET /{code}/stats returns click count
-- List all URLs with pagination
-- Background task that logs redirect events
+### Option C: E-Commerce Product Catalog
+- Products, Categories, Reviews — 3 tables with relationships
+- SQLAlchemy ForeignKey + relationship()
+- Filter by category, price range, rating
+- Full CRUD with proper status codes
 
 ---
 
-## Cheat Sheet — Testing Commands Reference
+## Cheat Sheet — Testing Commands
 
 ### Query parameters
 ```bash
-curl "http://127.0.0.1:8000/search?q=test&page=2"
+curl "http://127.0.0.1:4000/items?skip=0&limit=5"
 ```
 
 ### Path parameters
 ```bash
-curl http://127.0.0.1:8000/users/42/profile
+curl http://127.0.0.1:4000/items/1
 ```
 
 ### Request body (JSON)
 ```bash
-curl -X POST http://127.0.0.1:8000/items \
+curl -X POST http://127.0.0.1:4000/items \
   -H "Content-Type: application/json" \
   -d '{"name": "Laptop", "price": 999.0}'
 ```
 
 ### Headers
 ```bash
-curl -H "X-API-Key: secret" http://127.0.0.1:8000/secure-data
-```
-
-### Cookies
-```bash
-curl -b "session_id=abc123" http://127.0.0.1:8000/read-cookie
+curl -H "X-API-Key: secret" http://127.0.0.1:4000/secure-data
 ```
 
 ### Form data
 ```bash
-curl -X POST http://127.0.0.1:8000/login -d "username=alice&password=pass"
+curl -X POST http://127.0.0.1:4000/login -d "username=alice&password=pass"
 ```
 
 ### File upload
 ```bash
-curl -X POST http://127.0.0.1:8000/upload -F "file=@myfile.txt"
+curl -X POST http://127.0.0.1:4000/upload -F "file=@myfile.txt"
 ```
 
-### Show response headers (verbose)
+### Show response headers
 ```bash
-curl -v http://127.0.0.1:8000/items
+curl -v http://127.0.0.1:4000/items
 ```
 
-### WebSocket (browser console)
-```js
-let ws = new WebSocket("ws://127.0.0.1:8000/ws/echo");
-ws.onmessage = e => console.log(e.data);
-ws.send("Hello!");
+### Docker
+```bash
+docker compose up -d          # start
+docker compose down           # stop
+docker compose down -v        # stop + delete data
+docker compose ps             # status
+docker compose logs postgres  # DB logs
+```
+
+### PostgreSQL in Docker
+```bash
+# Connect directly
+docker exec -it fastapi-postgres psql -U fastapi -d fastapi_learn
+
+# Inside psql:
+\dt              # list tables
+SELECT * FROM items;
+\d items         # describe table
+\q               # quit
 ```
 
 ---
 
-**Done!** Work through each group, tick the boxes as you go, and by the end
-you'll have hands-on experience with every FastAPI routing concept.
+## Database Connection — The Golden Pattern
+
+Every route that needs the DB follows this exact pattern:
+
+```python
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from db.database import get_db
+from models.item import Item
+from schemas.item import ItemCreate, ItemRead
+
+router = APIRouter()
+
+@router.get("/items", response_model=list[ItemRead])
+def list_items(db: Session = Depends(get_db)):
+    return db.query(Item).all()
+
+@router.post("/items", response_model=ItemRead, status_code=201)
+def create_item(item_in: ItemCreate, db: Session = Depends(get_db)):
+    db_item = Item(**item_in.model_dump())
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+```
+
+`Depends(get_db)` is the magic — it injects a fresh database session for every request.
+You never open/close connections manually.
+
+---
+
+**Done!** Work through each group, build with PostgreSQL from day one, and by the end
+you'll have hands-on experience with FastAPI + real database patterns.
