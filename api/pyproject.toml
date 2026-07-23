@@ -8,10 +8,14 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "pydantic>=2.10.0",
     "python-multipart>=0.0.20",
+    "pydantic-settings>=2.0",
+    "sqlalchemy>=2.0",
+    "psycopg2-binary>=2.9",
 ]
 
-[tool.uvicorn]
-host = "127.0.0.1"
-port = 3000
-reload = true
-log-level = "info"
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
