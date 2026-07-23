@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     debug: bool = False
+    database_url: str = "postgresql://fastapi:fastapi@localhost:5400/fastapi_learn"
 
     # App
     title: str = "FastAPI Learning Lab"
@@ -28,3 +29,4 @@ class Settings(BaseSettings):
 
 # Create a single global instance — import this everywhere.
 settings = Settings()
+
