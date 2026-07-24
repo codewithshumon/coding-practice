@@ -25,7 +25,3 @@ host = "127.0.0.1"
 port = 4000
 reload = true
 log-level = "info"
-
-
-[tool.mypy]
-cache_dir = "/dev/null"
