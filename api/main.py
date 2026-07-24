@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from db.database import engine, Base
+from db.database import init_db
 from routes.hello import router as hello_router
 from routes.items import router as items_router
 from config import settings
@@ -8,10 +8,11 @@ from config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # STARTUP
-    Base.metadata.create_all(bind=engine)
+    # STARTUP — enable extensions + create tables
+    init_db()
     yield
     # SHUTDOWN (cleanup goes here if needed)
+
 
 app = FastAPI(
     title=settings.title,
