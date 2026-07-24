@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from db.database import engine, Base
 from routes.hello import router as hello_router
+from routes.items import router as items_router 
 from config import settings
 
 app = FastAPI(
@@ -10,6 +11,7 @@ app = FastAPI(
 )
 
 app.include_router(hello_router)
+app.include_router(items_router) 
 
 @app.on_event("startup")
 def on_startup():
