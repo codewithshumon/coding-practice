@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from db.database import init_db
 from routes.hello import router as hello_router
 from routes.items import router as items_router
+from routes.users import router as users_router
 from config import settings
 
 
@@ -23,6 +24,7 @@ app = FastAPI(
 
 app.include_router(hello_router)
 app.include_router(items_router)
+app.include_router(users_router)
 
 if __name__ == "__main__":
     import uvicorn
