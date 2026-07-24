@@ -1,6 +1,4 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
-
 
 # ── Base fields shared by multiple schemas ──
 class ItemBase(BaseModel):
