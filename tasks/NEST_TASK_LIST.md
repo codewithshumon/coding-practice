@@ -247,11 +247,11 @@ export abstract class BaseEntity {
 }
 ```
 
-### Step 2.2: Create the Item entity — `src/modules/items/item.entity.ts`
+### Step 2.2: Create the Item entity — `src/modules/items/entities/item.entity.ts`
 ```bash
-mkdir -p src/modules/items
+mkdir -p src/modules/items/{dto,entities,services,controllers}
 ```
-**File:** `src/modules/items/item.entity.ts`
+**File:** `src/modules/items/entities/item.entity.ts`
 ```typescript
 import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
@@ -278,7 +278,7 @@ export class Item extends BaseEntity {
 - `@Column()` — each property becomes a database column
 - `name: 'in_stock'` — in the DB it's `in_stock` (snake_case), in TypeScript it's `inStock` (camelCase)
 
-### Step 2.3: Create the DTO — `src/modules/items/create-item.dto.ts`
+### Step 2.3: Create the DTO — `src/modules/items/dto/create-item.dto.ts`
 **Why:** A DTO (Data Transfer Object) is what the client sends. You validate it with decorators.
 ```typescript
 import { IsString, IsNumber, IsOptional, IsBoolean, Min, MaxLength } from 'class-validator';
@@ -313,7 +313,7 @@ export class CreateItemDto {
 - `@Min(0)` — rejects negative prices
 - `@IsOptional()` — field can be omitted entirely
 
-### Step 2.4: Create the Update DTO — `src/modules/items/update-item.dto.ts`
+### Step 2.4: Create the Update DTO — `src/modules/items/dto/update-item.dto.ts`
 ```typescript
 import { PartialType } from '@nestjs/swagger';
 import { CreateItemDto } from './create-item.dto';
@@ -322,7 +322,7 @@ export class UpdateItemDto extends PartialType(CreateItemDto) {}
 ```
 **Why so short:** `PartialType()` makes every field from `CreateItemDto` optional. One line. PATCH only updates what the client sends, so this is exactly what you need.
 
-### Step 2.5: Create the Service — `src/modules/items/item.service.ts`
+### Step 2.5: Create the Service — `src/modules/items/services/item.service.ts`
 **Why:** Services hold business logic. Controllers only handle HTTP — they call services.
 ```typescript
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -371,7 +371,7 @@ export class ItemService {
 - `softRemove` — marks the row as deleted instead of actually removing it (BaseEntity's `deletedAt` column)
 - `findOne` reuses itself — the `update` and `remove` methods call `this.findOne(id)` so 404 logic lives in one place
 
-### Step 2.6: Create the Controller — `src/modules/items/item.controller.ts`
+### Step 2.6: Create the Controller — `src/modules/items/controllers/item.controller.ts`
 **Why:** The controller translates HTTP requests into service calls.
 ```typescript
 import {
@@ -501,7 +501,7 @@ Notice the soft-deleted item still exists — it just has a `deletedAt` timestam
 
 ## Phase 3 — Query Parameters & Pagination
 
-### Step 3.1: Create `src/modules/items/filter-item.dto.ts`
+### Step 3.1: Create `src/modules/items/dto/filter-item.dto.ts`
 **Why:** Separate DTO for GET query parameters. Extends pagination with filter fields.
 ```typescript
 import { IsOptional, IsString, IsNumber, IsBoolean, IsInt, Min, Max } from 'class-validator';
@@ -633,9 +633,9 @@ curl -X POST http://localhost:3000/items \
 
 ## Phase 5 — Users Module (Password Hashing)
 
-### Step 5.1: Create `src/modules/users/user.entity.ts`
+### Step 5.1: Create `src/modules/users/entities/user.entity.ts`
 ```bash
-mkdir -p src/modules/users
+mkdir -p src/modules/users/{dto,entities,services,controllers}
 ```
 ```typescript
 import { Entity, Column, Index } from 'typeorm';
@@ -658,7 +658,7 @@ export class User extends BaseEntity {
 }
 ```
 
-### Step 5.2: Create `src/modules/users/create-user.dto.ts`
+### Step 5.2: Create `src/modules/users/dto/create-user.dto.ts`
 ```typescript
 import { IsString, IsEmail, IsOptional, IsBoolean, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -686,7 +686,7 @@ export class CreateUserDto {
 }
 ```
 
-### Step 5.3: Create `src/modules/users/update-user.dto.ts`
+### Step 5.3: Create `src/modules/users/dto/update-user.dto.ts`
 ```typescript
 import { PartialType } from '@nestjs/swagger';
 import { CreateUserDto } from './create-user.dto';
@@ -716,7 +716,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 ```
 
-### Step 5.5: Create `src/modules/users/user.service.ts`
+### Step 5.5: Create `src/modules/users/services/user.service.ts`
 ```typescript
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -772,7 +772,7 @@ export class UserService {
 ```
 **Why the password dance:** Client sends `password` (plain text). DB stores `hashedPassword`. The service hashes it between receiving and saving.
 
-### Step 5.6: Create `src/modules/users/user.controller.ts`
+### Step 5.6: Create `src/modules/users/controllers/user.controller.ts`
 ```typescript
 import {
   Controller, Get, Post, Body, Patch, Param, Delete,
