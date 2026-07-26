@@ -940,7 +940,7 @@ These are small, self-contained modules. Each follows the same pattern: `mkdir`,
 mkdir -p src/modules/headers-cookies
 ```
 
-`headers-cookies.controller.ts`:
+`src/modules/headers-cookies/controllers/headers-cookies.controller.ts`:
 ```typescript
 import { Controller, Get, Headers, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -977,10 +977,10 @@ export class HeadersCookiesController {
 }
 ```
 
-`headers-cookies.module.ts`:
+`src/modules/headers-cookies/headers-cookies.module.ts`:
 ```typescript
 import { Module } from '@nestjs/common';
-import { HeadersCookiesController } from './headers-cookies.controller';
+import { HeadersCookiesController } from './controllers/headers-cookies.controller';
 
 @Module({
   controllers: [HeadersCookiesController],
@@ -997,7 +997,7 @@ curl -H "X-API-Key: dev-api-key" -v http://localhost:3000/demo/set-cookie
 
 ### Step 7.2: Status Codes — `src/modules/status-codes/`
 ```bash
-mkdir -p src/modules/status-codes
+mkdir -p src/modules/status-codes/controllers
 ```
 ```typescript
 @ApiTags('Status Codes')
@@ -1017,11 +1017,24 @@ export class StatusCodesController {
   }
 }
 ```
+`status-codes.module.ts`:
+```typescript
+import { Module } from '@nestjs/common';
+import { StatusCodesController } from './controllers/status-codes.controller';
+
+@Module({
+  controllers: [StatusCodesController],
+})
+export class StatusCodesModule {}
+```
+
+Register in AppModule.
+
 Test: `curl -v -H "X-API-Key: dev-api-key" http://localhost:3000/demo-status/redirect`
 
 ### Step 7.3: Form Data & File Uploads — `src/modules/form-files/`
 ```bash
-mkdir -p src/modules/form-files
+mkdir -p src/modules/form-files/controllers
 mkdir uploads
 ```
 ```typescript
@@ -1037,6 +1050,20 @@ upload(@UploadedFile() file: Express.Multer.File) {
   return { filename: file.originalname, size: file.size };
 }
 ```
+Test:
+`form-files.module.ts`:
+```typescript
+import { Module } from '@nestjs/common';
+import { FormFilesController } from './controllers/form-files.controller';
+
+@Module({
+  controllers: [FormFilesController],
+})
+export class FormFilesModule {}
+```
+
+Register in AppModule.
+
 Test:
 ```bash
 curl -X POST http://localhost:3000/form-files/login -H "X-API-Key: dev-api-key" -d "username=alice&password=pass"
@@ -1157,41 +1184,62 @@ api/
 ├── uploads/
 │
 └── src/
-    ├── main.ts                     ← Entry: ConfigService, Swagger, ValidationPipe, ResponseWrapper
-    ├── app.module.ts               ← Root: ConfigModule, TypeORM, ItemsModule, UsersModule, Guards
+    ├── main.ts
+    ├── app.module.ts
     │
     ├── common/
     │   ├── entities/
-    │   │   └── base.entity.ts      ← id, createdAt, updatedAt, deletedAt
+    │   │   └── base.entity.ts          ← id, createdAt, updatedAt, deletedAt
     │   ├── guards/
-    │   │   └── api-key.guard.ts    ← Global auth via X-API-Key header
+    │   │   └── api-key.guard.ts        ← Global auth via X-API-Key header
     │   ├── interceptors/
     │   │   └── response-wrapper.interceptor.ts
     │   └── utils/
-    │       └── password.util.ts    ← bcrypt hash/verify
+    │       └── password.util.ts        ← bcrypt hash/verify
     │
     └── modules/
         ├── items/
-        │   ├── item.entity.ts      ← @Entity — DB table
-        │   ├── create-item.dto.ts  ← Validation — POST body
-        │   ├── update-item.dto.ts  ← PartialType — PATCH body
-        │   ├── filter-item.dto.ts  ← Query params + pagination
-        │   ├── item.service.ts     ← Business logic
-        │   ├── item.controller.ts  ← HTTP routes
-        │   └── items.module.ts     ← Feature module
+        │   ├── dto/
+        │   │   ├── create-item.dto.ts
+        │   │   ├── update-item.dto.ts
+        │   │   └── filter-item.dto.ts
+        │   ├── entities/
+        │   │   └── item.entity.ts
+        │   ├── services/
+        │   │   └── item.service.ts
+        │   ├── controllers/
+        │   │   └── item.controller.ts
+        │   └── items.module.ts
         │
         ├── users/
-        │   ├── user.entity.ts
-        │   ├── create-user.dto.ts
-        │   ├── update-user.dto.ts
-        │   ├── user.service.ts
-        │   ├── user.controller.ts
+        │   ├── dto/
+        │   │   ├── create-user.dto.ts
+        │   │   └── update-user.dto.ts
+        │   ├── entities/
+        │   │   └── user.entity.ts
+        │   ├── services/
+        │   │   └── user.service.ts
+        │   ├── controllers/
+        │   │   └── user.controller.ts
         │   └── users.module.ts
         │
         ├── headers-cookies/
+        │   ├── controllers/
+        │   │   └── headers-cookies.controller.ts
+        │   └── headers-cookies.module.ts
+        │
         ├── status-codes/
+        │   ├── controllers/
+        │   │   └── status-codes.controller.ts
+        │   └── status-codes.module.ts
+        │
         ├── form-files/
+        │   ├── controllers/
+        │   │   └── form-files.controller.ts
+        │   └── form-files.module.ts
+        │
         └── websocket/
+            └── events.gateway.ts
 ```
 
 ---
