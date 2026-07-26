@@ -1,35 +1,56 @@
-# Virtual environment
-venv/
-.venv/
-env/
-.env
+# compiled output
+/dist
+/node_modules
+/build
 
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-dist/
-build/
-eggs/
-*.egg
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS junk
+# OS
 .DS_Store
-Thumbs.db
 
-# Environment file (contains secrets)
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# dotenv environment variable files
 .env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
-# Jupyter notebooks checkpoints
-.ipynb_checkpoints/
+# temp directory
+.temp
+.tmp
 
-# pyenv
-.python-version
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
