@@ -9,7 +9,6 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
 } from '@nestjs/common';
 
 import { ItemService } from '../services/item.service';
@@ -39,23 +38,20 @@ export class ItemController {
   @Get(':id')
   @ApiOperation({ summary: 'Get one item' })
   @ApiResponse({ status: 404, description: 'Not found' })
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Item> {
+  findOne(@Param('id') id: string): Promise<Item> {
     return this.itemService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Partial update' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateItemDto,
-  ): Promise<Item> {
+  update(@Param('id') id: string, @Body() dto: UpdateItemDto): Promise<Item> {
     return this.itemService.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Soft-delete an item' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  remove(@Param('id') id: string): Promise<void> {
     return this.itemService.remove(id);
   }
 }

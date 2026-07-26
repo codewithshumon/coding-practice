@@ -21,19 +21,19 @@ export class ItemService {
     return this.itemRepo.find({ order: { createdAt: 'DESC' } });
   }
 
-  async findOne(id: number): Promise<Item> {
+  async findOne(id: string): Promise<Item> {
     const item = await this.itemRepo.findOneBy({ id });
     if (!item) throw new NotFoundException(`Item ${id} not found`);
     return item;
   }
 
-  async update(id: number, dto: UpdateItemDto): Promise<Item> {
+  async update(id: string, dto: UpdateItemDto): Promise<Item> {
     const item = await this.findOne(id); // reuses findOne (which throws 404)
     Object.assign(item, dto); // merges dto fields into item
     return this.itemRepo.save(item);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const item = await this.findOne(id);
     await this.itemRepo.softRemove(item); // soft delete — sets deletedAt, doesn't actually delete
   }
