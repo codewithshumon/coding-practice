@@ -5,14 +5,14 @@ import { BaseEntity } from '@common/entities/base.entity';
 export class Item extends BaseEntity {
   @Column({ length: 255 })
   @Index()
-  name: string;
+  name!: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price: number;
+  price!: number;
 
-  @Column({ nullable: true, length: 1000 })
-  description: string | null;
+  @Column({ type: 'text', nullable: true })
+  description!: string | null;
 
   @Column({ name: 'in_stock', default: true })
-  inStock: boolean;
+  inStock!: boolean;
 }
