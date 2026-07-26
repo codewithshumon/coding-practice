@@ -14,5 +14,5 @@ export class User extends BaseEntity {
   status!: boolean;
 
   @Column({ type: 'text', nullable: true })
-  bio?: string | null;
+  bio!: string | null;
 }

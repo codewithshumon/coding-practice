@@ -19,8 +19,7 @@ export class CreateUserDto {
   @Min(0)
   age!: number;
 
-  @ApiPropertyOptional({ default: true })
-  @IsOptional()
+  @ApiProperty({ default: true, description: 'User active status' })
   @IsBoolean()
   status!: boolean;
 
