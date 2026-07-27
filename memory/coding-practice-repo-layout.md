@@ -27,6 +27,10 @@
 | `case/search/` | Search engines (Elasticsearch, OpenSearch, Solr) | `search-engines.md` |
 | `case/messaging/` | Messaging discipline + brokers (RabbitMQ, GCP Pub/Sub, BullMQ); AWS messaging in cloud-service | `message-queues.md`; Kafka planned |
 | `case/iac/` | IaC tools (AWS CDK, Terraform, CloudFormation, Pulumi) | `iac-tools.md` |
+| `case/media/` | Media-processing tools (WhisperX, Playwright, FFmpeg) | `media-processing.md` |
+| `case/security/` | API security discipline + auth mechanisms (OAuth, JWT) | `security-and-auth.md` |
+| `case/web/` | Web quality (Core Web Vitals, WCAG accessibility, SEO) | `web-quality.md` |
+| `case/devops/` | DevOps tools & practices (Git, Docker, CI/CD, GitHub Actions, CodePipeline, Linux) | `devops-and-cicd.md` |
 
 ## Conventions
 
