@@ -25,6 +25,8 @@
 | `case/database/` | Database systems (PostgreSQL, MySQL, DynamoDB, MongoDB) + optimization | `databases.md` |
 | `case/caching/` | In-memory caching stores (Redis, Memcached) + caching strategies | `caching.md` |
 | `case/search/` | Search engines (Elasticsearch, OpenSearch, Solr) | `search-engines.md` |
+| `case/messaging/` | Messaging discipline + brokers (RabbitMQ, GCP Pub/Sub, BullMQ); AWS messaging in cloud-service | `message-queues.md`; Kafka planned |
+| `case/iac/` | IaC tools (AWS CDK, Terraform, CloudFormation, Pulumi) | `iac-tools.md` |
 
 ## Conventions
 
