@@ -21,6 +21,7 @@
 | `case/framework/<name>/` | Framework-specific docs (one subfolder per framework) | `nextjs/` done; **FastAPI, Django, Spring Boot planned** |
 | `case/state-management/` | Cross-framework state topic | `react-state-management.md` |
 | `case/structures-architecture/` | Conceptual / architectural fundamentals | `backend-systems.md` |
+| `case/api/` | API & communication topics (REST, GraphQL, WebSockets, SSE, formats, integrations) | `apis-and-communication.md` |
 
 ## Conventions
 
