@@ -41,6 +41,8 @@ Every doc must contain, in order:
 
 7. **File grouping (IMPORTANT):** closely-related tools that **share concepts** (auth, regions, signing) go in **ONE combined file** with multiple parent topics in the TOC + a shared comparison hub at top. **Unrelated topics** get **separate files**. The AWS **SDK + CDK + CLI** trio is combined in `case/cloud-service/aws.md` (SDK=§1–11, CDK=§12–22, CLI=§23–33). Each tool gets a **distinct §2** comparing against its OWN alternatives so comparisons don't repeat.
 
+**Generalizes beyond AWS (frontend libraries, etc.):** keep the 11-section *shape*, but swap §4 → **"Core API"** (table of hooks/functions) and §8 → **"Common Patterns"** (idioms). Exemplar: `case/state-management/react-state-management.md` (Redux Toolkit / Zustand / TanStack Query / Context API).
+
 ---
 
 ## The 11-Section Body Template
