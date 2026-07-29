@@ -43,6 +43,8 @@ Every doc must contain, in order:
 
 **Generalizes beyond AWS (frontend libraries, etc.):** keep the 11-section *shape*, but swap §4 → **"Core API"** (table of hooks/functions) and §8 → **"Common Patterns"** (idioms). Exemplar: `case/state-management/react-state-management.md` (Redux Toolkit / Zustand / TanStack Query / Context API).
 
+**Whole frameworks** (`case/framework/{django,fastapi,spring-boot,nestjs,expressjs}`): swap §4 → **"Core Concepts & Features"** (framework building blocks table), §8 → **"Project Structure & Configuration"**. Each framework = ONE comprehensive 11-section doc (unlike Next.js, which decomposes into many sub-topics because its App Router has distinct primitives).
+
 **Databases** (`case/database/databases.md`): swap §4 → **"Data Model & Key Features"**, §8 → **"Connection & Authentication"**. A technique topic in the batch (e.g., Database Optimization) uses §7 → "Tools & Setup", §8 → "Measurement & Profiling". Keep the 11-section shape uniform; adapt §4/§7/§8 to the domain.
 
 ---
