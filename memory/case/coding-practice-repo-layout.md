@@ -18,7 +18,7 @@
 | Folder | Holds | Status |
 |---|---|---|
 | `case/cloud-service/` | Cloud-platform docs | `aws.md` (SDK/CDK/CLI) + `cloud-platforms.md` (AWS services, GCP/Azure, LocalStack) |
-| `case/framework/<name>/` | Framework-specific docs (one subfolder per framework) | `nextjs` (concept/multi-topic), `django`, `fastapi`, `spring-boot`, `nestjs`, `expressjs` (tool pattern, 11 sections) — all done |
+| `case/framework/<name>/` | Framework-specific docs (one subfolder per framework) | `nextjs` (concept/multi-topic), `django`, `fastapi`, `spring-boot`, `nestjs`, `expressjs`, `flask` (tool pattern, 11 sections) — all done |
 | `case/state-management/` | Cross-framework state topic | `react-state-management.md` |
 | `case/structures-architecture/` | Conceptual / architectural fundamentals | `backend-systems.md` |
 | `case/api/` | API & communication topics (REST, GraphQL, WebSockets, SSE, formats, integrations) | `apis-and-communication.md` |
