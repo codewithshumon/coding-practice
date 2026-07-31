@@ -1,19 +1,13 @@
-"""App factory — builds and configures the Flask application.
-
-Every environment (dev, test, prod) calls create_app() with different config.
-"""
+"""App factory — builds and configures the Flask application."""
 
 import logging
 import os
 from logging.config import dictConfig
-from pathlib import Path
 
-from flasgger import Swagger
 from flask import Flask
 
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 
-# Map FLASK_ENV to config class
 CONFIG_MAP = {
     "development": DevelopmentConfig,
     "testing": TestingConfig,
@@ -51,12 +45,7 @@ def configure_logging() -> None:
 
 
 def create_app(env: str | None = None):
-    """Build and return the Flask application.
-
-    Args:
-        env: 'development' | 'testing' | 'production'.
-             Defaults to FLASK_ENV env var, falling back to 'development'.
-    """
+    """Build and return the Flask application."""
     flask_env = env or os.getenv("FLASK_ENV", "development")
     config_class = CONFIG_MAP.get(flask_env, DevelopmentConfig)
 
@@ -65,7 +54,7 @@ def create_app(env: str | None = None):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # ── Attach extensions (the "two-phase" init pattern) ──
+    # ── Attach extensions ──
     from app.extensions import bcrypt, cors, db, limiter, migrate, socketio, talisman
 
     db.init_app(app)
@@ -74,52 +63,48 @@ def create_app(env: str | None = None):
     socketio.init_app(app, cors_allowed_origins="*")
     limiter.init_app(app)
 
-    # CORS — allow all origins in dev, lock down in prod
     if app.config.get("DEBUG", False):
         cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
     else:
         cors.init_app(app)
 
-    # Talisman — security headers (only in production)
     if not app.config.get("DEBUG", False) and not app.config.get("TESTING", False):
-        talisman.init_app(
-            app,
-            content_security_policy=None,
-            force_https=False,  # set True behind a real load balancer
-        )
+        talisman.init_app(app, content_security_policy=None, force_https=False)
 
-    # ── Swagger / Flasgger (API documentation auto-generated from route docstrings) ──
+    # ── Swagger / Flasgger ──
     from flasgger import Swagger
 
     swagger_config = app.config.get("SWAGGER", {})
     Swagger(app, template=swagger_config.get("template", {}), config=swagger_config)
 
-    # ── Register blueprints (each module's routes) ──
-    from app.modules.health.routes import health_bp
-    from app.modules.items.routes import items_bp
-    from app.modules.users.routes import users_bp
-    from app.modules.demo.routes import demo_bp
-    from app.modules.formfiles.routes import formfiles_bp
+    # =====================================================================
+    # BLUEPRINTS — add import + register line per module as you build them
+    # =====================================================================
+    from app.modules.health.routes import health_bp        # Step 0.12
 
     app.register_blueprint(health_bp)
-    app.register_blueprint(items_bp)
-    app.register_blueprint(users_bp)
-    app.register_blueprint(demo_bp)
-    app.register_blueprint(formfiles_bp)
+    # NEW_BLUEPRINT_IMPORT   ← add blueprint imports above this line
+    # NEW_BLUEPRINT_REGISTER ← add app.register_blueprint() above this line
 
-    # ── Register global hooks ──
-    from app.common.errors import register_error_handlers
-    from app.common.auth import require_api_key
-    from app.common.response_wrapper import wrap_response
+    # =====================================================================
+    # GLOBAL HOOKS — uncomment each block as you build it
+    # =====================================================================
+    # (Step 4.1) from app.common.errors import register_error_handlers
+    # (Step 4.1) register_error_handlers(app)
+    # (Step 6.2) from app.common.auth import require_api_key
+    # (Step 6.2) app.before_request(require_api_key)
+    # (Step 8.1) from app.common.response_wrapper import wrap_response
+    # (Step 8.1) app.after_request(wrap_response)
 
-    register_error_handlers(app)
-    app.before_request(require_api_key)
-    app.after_request(wrap_response)
+    # =====================================================================
+    # WEBSOCKET EVENTS — uncomment when you build it
+    # =====================================================================
+    # (Step 9.1) from app.modules.websocket import events  # noqa: F401
 
-    # ── Register WebSocket events (import for side-effects) ──
-    from app.modules.websocket import events  # noqa: F401
+    # ── Model discovery for Flask-Migrate ──
+    # (Step 2.2) from app.modules.items import models    # noqa: F401
+    # (Step 5.1) from app.modules.users import models    # noqa: F401
+    # NEW_MODEL_IMPORT ← add model imports above this line (after all blueprints)
 
-    # ── Make extensions accessible as app.extensions for shell/scripts ──
     app.extensions["bcrypt"] = bcrypt
-
     return app

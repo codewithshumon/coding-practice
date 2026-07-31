@@ -37,7 +37,7 @@ class BaseConfig:
     # ── Swagger / Flasgger ──
     SWAGGER: dict = {
         "title": "Flask Learning API",
-        "description": "Production-grade Flask REST API — learning lab. All routes except /health require an X-API-Key header.",
+        "description": "Production-grade Flask REST API — all routes except /health require X-API-Key header.",
         "version": "0.1.0",
         "uiversion": 3,
         "openapi": "3.0.3",
@@ -52,7 +52,7 @@ class DevelopmentConfig(BaseConfig):
 
 
 class TestingConfig(BaseConfig):
-    """pytest runs — separate DB, no auth."""
+    """pytest — SQLite in-memory, no auth required."""
     TESTING: bool = True
     SQLALCHEMY_DATABASE_URI: str = "sqlite:///:memory:"
     API_KEY: str = "test-key"
