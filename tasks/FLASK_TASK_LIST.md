@@ -186,12 +186,16 @@ dev = [
     "httpx>=0.27",
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 ```
 
 **Why `pyproject.toml` not `requirements.txt`:**
+- **`[tool.setuptools.packages.find]` with `include = ["app*"]`** — tells setuptools to only discover the `app/` package. Without this, it sees `app/`, `uploads/`, `migrations/`, and `tests/` as potential top-level packages and refuses to build with "Multiple top-level packages discovered in a flat-layout."
 - It's the modern Python packaging standard (PEP 621).
 - Dependency groups (`dev`) keep test tools separate from production installs.
 - A single file replaces `requirements.txt` + `requirements-dev.txt` + `setup.cfg`.
