@@ -1,10 +1,14 @@
-from flask import Flask, jsonify
+"""Development server entry point.
 
-app = Flask(__name__)
+Usage:
+    python run.py           # manual
+    flask run               # uses .flaskenv
+"""
 
-@app.get("/")
-def hello():
-    return jsonify({"message": "Hello World!"})
+from app import create_app, socketio
+
+app = create_app()
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    # Use socketio.run so WebSockets work in dev (flask run doesn't support them)
+    socketio.run(app, host="0.0.0.0", port=app.config["PORT"], debug=True)

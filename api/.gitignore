@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment (contains secrets — NEVER commit)
+# .env
+
+# Uploaded files (dev)
+uploads/*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite3
+
+# Migrations (commit these in real projects, but we regenerate during learning)
+# In production: REMOVE this line — migrations ARE committed
+migrations/versions/*
+!migrations/versions/.gitkeep
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage

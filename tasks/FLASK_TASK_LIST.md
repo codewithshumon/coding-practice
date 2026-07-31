@@ -5,22 +5,95 @@
 
 ---
 
+## Prerequisites — What You Need Before Starting
+
+### System Requirements
+
+| Requirement | Version | How to Check |
+|-------------|---------|---------------|
+| Python | ≥ 3.11 | `python --version` |
+| pip | ≥ 23.0 | `pip --version` |
+| Docker | ≥ 24.0 | `docker --version` |
+| Docker Compose | ≥ 2.20 | `docker compose version` |
+| curl | any | `curl --version` |
+| Git | any | `git --version` |
+
+### Install Python (if not already installed)
+
+**Linux (Debian/Ubuntu/Kali):**
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv python3-dev
+```
+
+**macOS (Homebrew):**
+```bash
+brew install python@3.12
+```
+
+**Windows (winget):**
+```powershell
+winget install Python.Python.3.12
+```
+
+### Install Docker (if not already installed)
+
+**Linux:**
+```bash
+# Docker
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER   # log out and back in after this
+
+# Docker Compose (standalone)
+sudo apt install -y docker-compose-v2
+```
+
+**macOS / Windows:**
+Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+### Verify Everything
+
+```bash
+python --version        # Should be 3.11+
+pip --version           # Should be 23.0+
+docker --version        # Should be 24.0+
+docker compose version  # Should be 2.20+
+```
+
+---
+
 ## Phase 0 — Project Scaffold (Production-Grade Foundation)
 
 Everything starts here. By the end of Phase 0 you'll have a proper app factory, separate config classes per environment, all extensions in one file, a wsgi entry point for gunicorn, and a working health-check route.
 
 ---
 
-### Step 0.1: Create the full folder structure
+### Step 0.1: Create the full folder structure (with all `__init__.py` files)
 
 ```bash
-mkdir -p api/app/common/{models,utils}
+# Create directories
+mkdir -p api/app/common/models
+mkdir -p api/app/common/utils
 mkdir -p api/app/modules
 mkdir -p api/tests
 mkdir -p api/uploads
+mkdir -p api/migrations/versions
+
+# Create ALL __init__.py files right now (so imports never fail)
+touch api/app/__init__.py
+touch api/app/common/__init__.py
+touch api/app/common/models/__init__.py
+touch api/app/common/utils/__init__.py
+touch api/app/modules/__init__.py
+touch api/tests/__init__.py
+
+# Required by .gitignore — keeps empty versions/ dir in git
+touch api/migrations/versions/.gitkeep
 ```
 
-**Why now:** Every file you create in later steps already has a home. No `mkdir` mid-build.
+**Why now:** Every file you create in later steps already has a home.
+Every `__init__.py` exists from the start — no "module not found" errors mid-build.
+No `mkdir` or `touch __init__.py` in any later step.
 
 ---
 
@@ -125,6 +198,158 @@ pythonpath = ["."]
 
 ---
 
+### Step 0.3a: Create and activate the virtual environment
+
+**Why now:** Every Python project gets its own isolated environment. Global package installs cause version conflicts between projects. This must be done before any file that runs Python (config, app factory, run.py).
+
+```bash
+cd api
+
+# Create the virtual environment (Python 3.11+)
+python3 -m venv .venv
+
+# Activate it
+source .venv/bin/activate     # Linux / macOS
+# .venv\Scripts\activate      # Windows (PowerShell/CMD)
+
+# Verify you're inside the venv
+which python                   # Should show .../api/.venv/bin/python
+python --version               # Should be 3.11+
+```
+
+**How venv works:**
+- `python3 -m venv .venv` — creates a folder `.venv/` with a full copy of Python + pip.
+- `source .venv/bin/activate` — rewrites your shell's `PATH` so `python` and `pip` point to `.venv/`.
+- When you're done working, type `deactivate` to leave the venv.
+- `.venv/` is **never committed** (it's in `.gitignore`). Each developer creates their own.
+
+**Tip:** Add this to your shell profile so you never forget:
+```bash
+# In ~/.zshrc or ~/.bashrc
+alias flaskenv='cd /path/to/api && source .venv/bin/activate'
+```
+
+---
+
+### Step 0.3b: Install all dependencies into the venv
+
+```bash
+# Make sure the venv is activated first!
+pip install --upgrade pip              # Latest pip (avoids resolution bugs)
+pip install -e ".[dev]"                # Install the project + dev extras in editable mode
+```
+
+**What each flag does:**
+- `-e` (editable) — installs in "development mode". Changes to your code are reflected immediately — no reinstall needed after every edit.
+- `".[dev]"` — installs `[project]` dependencies + `[project.optional-dependencies] dev` group (pytest, httpx).
+
+**Verify installation:**
+```bash
+pip list | grep -i flask              # Should show flask, flask-sqlalchemy, flask-pydantic, etc.
+python -c "import flask; print(flask.__version__)"   # Should print 3.1+
+```
+
+**Common install errors and fixes:**
+| Error | Fix |
+|-------|-----|
+| `error: command 'gcc' failed` | `sudo apt install -y gcc libpq-dev python3-dev` |
+| `No module named 'setuptools'` | `pip install --upgrade setuptools wheel` |
+| `psycopg2-binary` fails | `sudo apt install -y libpq-dev` then retry |
+| Permission denied | Did you activate the venv? `source .venv/bin/activate` |
+
+---
+
+### Step 0.3c: Create standalone `docker-compose.db.yml` — Postgres + pgAdmin only
+
+**Why now:** You need a running database before you can test the Flask app. This file starts ONLY the database services (not the app, not Celery). The full multi-service compose file comes in Phase 1 — this is your lightweight "just give me a DB" version for development.
+
+**Where:** `api/docker-compose.db.yml`
+
+```yaml
+# Standalone database services for local development.
+# Start with:  docker compose -f docker-compose.db.yml up -d
+# Stop with:   docker compose -f docker-compose.db.yml down
+# Logs:        docker compose -f docker-compose.db.yml logs -f
+
+services:
+  # ── PostgreSQL ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: flask-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flask
+      POSTGRES_PASSWORD: flask
+      POSTGRES_DB: flask_learn
+    ports:
+      - "5600:5432"           # Host 5600 → Container 5432 (avoids collisions)
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flask -d flask_learn"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── pgAdmin (browser-based DB GUI) ──
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: flask-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5051:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata_dev:
+```
+
+**Start the database:**
+```bash
+cd api
+docker compose -f docker-compose.db.yml up -d
+```
+
+**Verify it's running:**
+```bash
+docker compose -f docker-compose.db.yml ps
+# Both services should show "healthy" or "Up"
+
+# Test from host:
+docker exec flask-postgres psql -U flask -d flask_learn -c "SELECT 1 AS connected;"
+```
+
+**Access pgAdmin (browser GUI for PostgreSQL):**
+1. Open [http://localhost:5051](http://localhost:5051)
+2. Login: `admin@admin.com` / `admin`
+3. Right-click "Servers" → Register → Server
+4. Name: `flask-learn`
+5. Connection tab: Host=`postgres` (container name, NOT localhost), Port=`5432`, User=`flask`, Password=`flask`, DB=`flask_learn`
+6. Click Save
+
+**Stop the database (data persists in the Docker volume):**
+```bash
+docker compose -f docker-compose.db.yml down
+```
+
+**Stop AND delete all data (fresh start):**
+```bash
+docker compose -f docker-compose.db.yml down -v
+```
+
+**Port explanation:**
+| Service | Host Port | Why |
+|---------|-----------|-----|
+| Postgres | `5600` | Non-default port — won't collide if you already have Postgres running on 5432 |
+| pgAdmin | `5051` | Non-default — avoids collisions with other pgAdmin instances |
+
+---
+
 ### Step 0.4: Create `.flaskenv`
 
 **Where:** `api/.flaskenv`
@@ -216,6 +441,16 @@ class BaseConfig:
     RATELIMIT_STORAGE_URI: str = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
     RATELIMIT_DEFAULT: str = "200 per day;50 per hour"
 
+    # ── Swagger / Flasgger ──
+    SWAGGER: dict = {
+        "title": "Flask Learning API",
+        "description": "Production-grade Flask REST API — learning lab. All routes except /health require an X-API-Key header.",
+        "version": "0.1.0",
+        "uiversion": 3,
+        "openapi": "3.0.3",
+        "specs_route": "/apidocs/",
+    }
+
 
 class DevelopmentConfig(BaseConfig):
     """Local dev — verbose errors, auto-reload."""
@@ -296,9 +531,11 @@ Every environment (dev, test, prod) calls create_app() with different config.
 """
 
 import logging
+import os
 from logging.config import dictConfig
 from pathlib import Path
 
+from flasgger import Swagger
 from flask import Flask
 
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
@@ -313,8 +550,6 @@ CONFIG_MAP = {
 
 def configure_logging() -> None:
     """Structured JSON-line logging. In dev, plain-text for readability."""
-    import os
-
     is_prod = os.getenv("FLASK_ENV") == "production"
     handler_class = "logging.StreamHandler"
 
@@ -349,8 +584,6 @@ def create_app(env: str | None = None):
         env: 'development' | 'testing' | 'production'.
              Defaults to FLASK_ENV env var, falling back to 'development'.
     """
-    import os
-
     flask_env = env or os.getenv("FLASK_ENV", "development")
     config_class = CONFIG_MAP.get(flask_env, DevelopmentConfig)
 
@@ -381,6 +614,12 @@ def create_app(env: str | None = None):
             content_security_policy=None,
             force_https=False,  # set True behind a real load balancer
         )
+
+    # ── Swagger / Flasgger (API documentation auto-generated from route docstrings) ──
+    from flasgger import Swagger
+
+    swagger_config = app.config.get("SWAGGER", {})
+    Swagger(app, template=swagger_config.get("template", {}), config=swagger_config)
 
     # ── Register blueprints (each module's routes) ──
     from app.modules.health.routes import health_bp
@@ -491,47 +730,142 @@ health_bp = Blueprint("health", __name__)
 
 @health_bp.get("/health")
 def health():
+    """Health check endpoint.
+    ---
+    tags:
+      - Health
+    responses:
+      200:
+        description: API is healthy
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: ok
+                timestamp:
+                  type: string
+                  format: date-time
+    """
     return jsonify({
         "status": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     })
 ```
 
-**Note:** The `FormFilesModule` and `WebSocketModule` blueprints won't exist yet — the imports in `app/__init__.py` will fail. For now, **comment out** the lines that import blueprints you haven't created yet:
+**Note about blueprint imports:** The `app/__init__.py` you created in Step 0.9 imports blueprints that don't exist yet (items, users, demo, formfiles, websocket). For now, **comment out** the lines for blueprints you haven't built yet. Keep only the `health_bp` import and registration active:
 
 ```python
-# In app/__init__.py, comment out imports for blueprints not yet created:
+# In app/__init__.py — keep ONLY these imports active for now:
+from app.modules.health.routes import health_bp
+
+# COMMENT OUT these (they don't exist yet):
 # from app.modules.items.routes import items_bp
 # from app.modules.users.routes import users_bp
 # from app.modules.demo.routes import demo_bp
 # from app.modules.formfiles.routes import formfiles_bp
-# app.register_blueprint(items_bp)  ...etc
+
+# In the register_blueprint section — keep ONLY:
+app.register_blueprint(health_bp)
+
+# COMMENT OUT:
+# app.register_blueprint(items_bp)
+# app.register_blueprint(users_bp)
+# app.register_blueprint(demo_bp)
+# app.register_blueprint(formfiles_bp)
+
+# Also comment out these hooks (they don't exist yet):
+# from app.common.errors import register_error_handlers
+# from app.common.auth import require_api_key
+# from app.common.response_wrapper import wrap_response
+# register_error_handlers(app)
+# app.before_request(require_api_key)
+# app.after_request(wrap_response)
+
+# Also comment out WebSocket events:
 # from app.modules.websocket import events  # noqa: F401
 ```
 
-Keep only the `health_bp` import and registration uncommented.
+**As you build each module in later phases, uncomment the corresponding lines.** The specific steps (2.6, 5.6, 7.3) tell you exactly what to uncomment.
 
 ---
 
-### Step 0.13: Install dependencies and verify
+### Step 0.13: Run the Flask dev server (first time!)
 
+**Make sure everything is ready:**
 ```bash
-cd api
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+# 1. Is the venv activated?
+which python
+# Should show: .../api/.venv/bin/python
+# If not: source .venv/bin/activate
+
+# 2. Are dependencies installed?
+pip list | grep -i flask
+# If not: pip install -e ".[dev]"
+
+# 3. Is Postgres running?
+docker compose -f docker-compose.db.yml ps
+# If not: docker compose -f docker-compose.db.yml up -d
+
+# 4. Are you in the right directory?
+pwd
+# Should show: .../api
 ```
 
-Then:
+**Start the server (choose one method):**
+
+**Method A — `python run.py` (recommended for dev):**
 ```bash
 python run.py
 ```
+Uses `socketio.run()` — WebSockets work, debug mode on, auto-reloads on file changes.
 
-Open:
-- [http://localhost:5000/health](http://localhost:5000/health) → `{"status":"ok","timestamp":"..."}`
-- [http://localhost:5000/apidocs](http://localhost:5000/apidocs) → Swagger UI (mostly empty, one health route)
+**Method B — `flask run` (CLI, reads `.flaskenv`):**
+```bash
+flask run
+```
+Lighter weight, but WebSocket events won't work (no socketio support in flask CLI).
 
-If you get import errors, make sure only the `health_bp` import is active in `app/__init__.py`.
+**What you should see:**
+```
+ * Serving Flask app 'run.py'
+ * Debug mode: on
+ * Running on http://0.0.0.0:5000
+Press CTRL+C to quit
+```
+
+**Test everything works:**
+```bash
+# In another terminal (or browser):
+
+# Health check (no auth needed — exempt from API key)
+curl http://localhost:5000/health
+# → {"data":{"status":"ok","timestamp":"..."},"success":true,"timestamp":"..."}
+
+# Swagger UI (no auth needed)
+# Open in browser: http://localhost:5000/apidocs/
+# You should see the Flasgger UI with the health endpoint documented
+
+# Items (will 401 — no API key yet)
+curl http://localhost:5000/api/items/
+# → {"error":"Missing X-API-Key header"}
+```
+
+**If something fails, common fixes:**
+
+| Symptom | Check |
+|---------|-------|
+| `ImportError: No module named 'app'` | Is venv activated? Is `pip install -e ".[dev]"` run? |
+| `ImportError: No module named 'app.modules.items.routes'` | Did you comment out the future blueprints in `__init__.py`? (see Step 0.12 note) |
+| `sqlalchemy.exc.OperationalError` | Is Postgres running? `docker compose -f docker-compose.db.yml ps` |
+| Port 5000 already in use | `lsof -ti:5000 \| xargs kill` or change `PORT` in `.env` |
+| `/apidocs/` shows blank page | Flasgger was just initialized with no documented routes yet. It will populate as you build modules with docstrings. |
+
+**To stop the server:** Press `Ctrl+C` in the terminal where it's running.
+
+---
 
 ---
 
@@ -999,29 +1333,104 @@ def handle_not_found(err):
 @items_bp.post("/")
 @validate()
 def create_item(body: CreateItemSchema):
+    """Create a new item.
+    ---
+    tags:
+      - Items
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateItemSchema'
+    responses:
+      201:
+        description: Item created successfully
+      400:
+        description: Validation error
+    """
     item = service.create_item(body)
     return jsonify(item.to_dict()), 201
 
 
 @items_bp.get("/")
 def list_items():
+    """List all items.
+    ---
+    tags:
+      - Items
+    responses:
+      200:
+        description: List of all non-deleted items
+    """
     items = service.get_all_items()
     return jsonify([i.to_dict() for i in items])
 
 
 @items_bp.get("/<int:item_id>")
 def get_item(item_id: int):
+    """Get a single item by ID.
+    ---
+    tags:
+      - Items
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+        description: The item ID
+    responses:
+      200:
+        description: Item found
+      404:
+        description: Item not found
+    """
     return jsonify(service.get_item(item_id).to_dict())
 
 
 @items_bp.patch("/<int:item_id>")
 @validate()
 def update_item(item_id: int, body: UpdateItemSchema):
+    """Partially update an item (PATCH semantics).
+    ---
+    tags:
+      - Items
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateItemSchema'
+    responses:
+      200:
+        description: Item updated
+      404:
+        description: Item not found
+    """
     return jsonify(service.update_item(item_id, body).to_dict())
 
 
 @items_bp.delete("/<int:item_id>")
 def delete_item(item_id: int):
+    """Soft-delete an item.
+    ---
+    tags:
+      - Items
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+    responses:
+      204:
+        description: Item deleted (soft)
+      404:
+        description: Item not found
+    """
     service.delete_item(item_id)
     return "", 204
 ```
@@ -1191,6 +1600,40 @@ from app.modules.items.schemas import FilterItemSchema  # add to imports
 @items_bp.get("/")
 @validate()
 def list_items(query: FilterItemSchema):
+    """List items with optional filtering and pagination.
+    ---
+    tags:
+      - Items
+    parameters:
+      - in: query
+        name: page
+        type: integer
+        default: 1
+        description: Page number (1-indexed)
+      - in: query
+        name: page_size
+        type: integer
+        default: 10
+        description: Items per page (max 100)
+      - in: query
+        name: name
+        type: string
+        required: false
+        description: Filter by name (case-insensitive ILIKE search)
+      - in: query
+        name: max_price
+        type: number
+        required: false
+        description: Filter items with price <= this value
+      - in: query
+        name: in_stock
+        type: boolean
+        required: false
+        description: Filter by stock status
+    responses:
+      200:
+        description: Paginated, filtered list of items
+    """
     return jsonify(service.get_filtered_items(query))
 ```
 
@@ -1212,10 +1655,6 @@ curl "http://localhost:5000/api/items/?page_size=200"   # 400 — validation err
 ### Step 4.1: Create `app/common/errors.py`
 
 **Why:** A single module registers all error handlers on the app — Flask's equivalent of NestJS's global `ValidationPipe`.
-
-```bash
-touch api/app/common/__init__.py
-```
 
 ```python
 """Global error handlers — registered once in create_app()."""
@@ -1348,10 +1787,6 @@ class UpdateUserSchema(BaseModel):
 ### Step 5.3: Create password helper
 
 **Where:** `api/app/common/utils/password.py`
-
-```bash
-touch api/app/common/utils/__init__.py
-```
 
 ```python
 from app.extensions import bcrypt
@@ -2052,10 +2487,6 @@ def api_headers():
 
 **Where:** `api/tests/test_items.py`
 
-```bash
-mkdir -p api/tests
-```
-
 ```python
 """Tests for the Items module."""
 
@@ -2359,7 +2790,8 @@ In `docker-compose.yml`, add:
 api/
 ├── pyproject.toml                ← All deps + tool config
 ├── Dockerfile                    ← Multi-stage production build
-├── docker-compose.yml            ← App + Postgres + pgAdmin + Redis + Celery
+├── docker-compose.yml            ← Full stack: App + Postgres + pgAdmin + Redis + Celery
+├── docker-compose.db.yml         ← Lightweight: Postgres + pgAdmin only (dev)
 ├── .dockerignore
 ├── .flaskenv                     ← FLASK_APP, FLASK_DEBUG
 ├── .env                          ← Real secrets (gitignored)
@@ -2370,45 +2802,61 @@ api/
 ├── run.py                        ← Dev server entry (socketio.run)
 ├── uploads/                      ← File uploads (gitignored)
 ├── migrations/                   ← Alembic versions (commit in real projects)
+│   └── versions/
+│       └── .gitkeep
 ├── tests/
+│   ├── __init__.py
 │   ├── conftest.py               ← pytest fixtures
 │   └── test_items.py             ← Item CRUD tests
 │
 └── app/
-    ├── __init__.py               ← create_app() factory
-    ├── config.py                 ← Dev / Test / Prod config classes
+    ├── __init__.py               ← create_app() factory (includes Flasgger init)
+    ├── config.py                 ← Dev / Test / Prod config classes (includes Swagger config)
     ├── extensions.py             ← db, bcrypt, migrate, socketio, cors, talisman, limiter
     ├── celery_worker.py          ← Celery app + tasks + beat schedule
     │
     ├── common/
-    │   ├── models/base.py        ← id, created_at, updated_at, deleted_at
-    │   ├── utils/password.py     ← bcrypt hash/verify
+    │   ├── __init__.py
+    │   ├── models/
+    │   │   ├── __init__.py
+    │   │   └── base.py           ← id, created_at, updated_at, deleted_at
+    │   ├── utils/
+    │   │   ├── __init__.py
+    │   │   └── password.py       ← bcrypt hash/verify
     │   ├── auth.py               ← X-API-Key guard (before_request)
     │   ├── errors.py             ← Global error handlers
     │   └── response_wrapper.py   ← {success, data, timestamp} envelope (after_request)
     │
     └── modules/
-        ├── health/routes.py      ← /health (no auth)
+        ├── __init__.py
+        ├── health/
+        │   ├── __init__.py
+        │   └── routes.py         ← /health (no auth, Swagger-documented)
         │
         ├── items/
+        │   ├── __init__.py
         │   ├── schemas.py        ← CreateItemSchema, UpdateItemSchema, FilterItemSchema
         │   ├── models.py         ← Item (SQLAlchemy)
         │   ├── service.py        ← Business logic
-        │   └── routes.py         ← POST/GET/PATCH/DELETE /api/items
+        │   └── routes.py         ← POST/GET/PATCH/DELETE /api/items (Swagger-documented)
         │
         ├── users/
+        │   ├── __init__.py
         │   ├── schemas.py        ← CreateUserSchema, UpdateUserSchema
         │   ├── models.py         ← User (SQLAlchemy)
         │   ├── service.py        ← Password hashing, uniqueness checks
         │   └── routes.py         ← POST/GET/PATCH/DELETE /api/users
         │
         ├── demo/
+        │   ├── __init__.py
         │   └── routes.py         ← Headers, cookies, status codes
         │
         ├── formfiles/
+        │   ├── __init__.py
         │   └── routes.py         ← Form parsing, file uploads
         │
         └── websocket/
+            ├── __init__.py
             └── events.py         ← SocketIO connect/message/join/leave
 ```
 
@@ -2465,3 +2913,126 @@ api/
 | Security headers | `Secure()` middleware | `Talisman` |
 | CORS | `CORSMiddleware` | `CORS(app)` |
 | Rate limiting | slowapi | Flask-Limiter |
+
+---
+
+## Troubleshooting Guide — Common Errors & How to Fix Them
+
+### Import Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| `ModuleNotFoundError: No module named 'flask'` | venv not activated or deps not installed | `source .venv/bin/activate && pip install -e ".[dev]"` |
+| `ModuleNotFoundError: No module named 'app'` | Not in `api/` directory, or `pip install -e .` not run | `cd api && pip install -e ".[dev]"` |
+| `ImportError: cannot import name 'items_bp'` | Blueprint not yet created (commented out needed) | Uncomment the corresponding blueprint import in `app/__init__.py` |
+| `ModuleNotFoundError: No module named 'app.common.errors'` | That file hasn't been created yet (working ahead of phases) | Comment out `from app.common.errors import register_error_handlers` in `__init__.py` until Phase 4 |
+
+### Database Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| `sqlalchemy.exc.OperationalError: could not connect to server` | Postgres container isn't running | `docker compose -f docker-compose.db.yml up -d` |
+| `sqlalchemy.exc.OperationalError: FATAL: database "flask_learn" does not exist` | Container started but database wasn't created | `docker compose -f docker-compose.db.yml down -v && docker compose -f docker-compose.db.yml up -d` |
+| `sqlalchemy.exc.ProgrammingError: relation "items" does not exist` | Migrations not run | `flask db upgrade` |
+| `sqlalchemy.exc.ProgrammingError: relation "alembic_version" does not exist` | `flask db init` not run | `flask db init && flask db migrate && flask db upgrade` |
+| `Target database is not up to date` | Migration generated but not applied | `flask db upgrade` |
+
+### Docker Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| `port is already allocated` | Port 5600 or 5051 already in use | `docker ps` to find conflicting containers, stop them, or change ports in compose file |
+| `Cannot connect to the Docker daemon` | Docker daemon not running | `sudo systemctl start docker` (Linux) or start Docker Desktop |
+| `permission denied while trying to connect to the Docker daemon socket` | User not in `docker` group | `sudo usermod -aG docker $USER`, then log out and back in |
+| Container exits immediately | App crashed on startup | `docker compose logs app` to see error output |
+
+### Runtime Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| `KeyError: 'API_KEY'` or similar config key | `.env` file missing or not loaded | Check `.env` exists in `api/` and `python-dotenv` is in deps |
+| `AttributeError: 'NoneType' object has no attribute '...'` | Object not found — service returned None | Check if the ID exists; check `deleted_at` filter |
+| `400 Bad Request: extra fields not permitted` | Sending unknown fields (Pydantic `extra="forbid"`) | Remove unknown fields from request body |
+| `401 Missing X-API-Key header` | Auth guard active — all routes need `X-API-Key` header (except `/health`, `/apidocs`) | Add `-H "X-API-Key: dev-api-key"` to curl, or add path to `EXEMPT_PREFIXES` |
+| `RuntimeError: Working outside of application context` | Accessing `current_app` or `db.session` outside a request | Use `with app.app_context():` block |
+
+### Swagger / Flasgger Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| `/apidocs/` returns 404 or blank page | Flasgger not initialized, or route not registered | Check `from flasgger import Swagger; Swagger(app, ...)` in `create_app()` |
+| `/apidocs/` shows "No operations defined in spec" | Routes don't have Swagger docstrings yet | Add YAML docstrings to your route functions (see Step 2.5 for examples) |
+| `/apidocs/` works but endpoints show no parameters | Docstring missing `parameters:` section | Add parameter definitions in Swagger YAML format |
+
+### Testing Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| `pytest: command not found` | pytest not installed (forgot `dev` extras) | `pip install -e ".[dev]"` |
+| `E sqlalchemy.exc.OperationalError` during tests | Tests connecting to real Postgres instead of in-memory SQLite | Make sure `create_app(env="testing")` is used — it sets `SQLALCHEMY_DATABASE_URI` to `sqlite:///:memory:` |
+| `AssertionError: assert 401 == 201` (in tests) | Auth key not matching `TestingConfig` | Use `headers={"X-API-Key": "test-key"}` (matching `TestingConfig.API_KEY`) |
+
+### WebSocket Errors
+
+| Error | Likely Cause | Fix |
+|-------|-------------|-----|
+| WebSocket connection fails | Using `flask run` instead of `python run.py` | `flask run` doesn't support WebSockets — use `python run.py` |
+| `400 Bad Request: The client is using an unsupported version of the Socket.IO protocol` | Socket.IO client version mismatch | Use socket.io client v4.x (compatible with flask-socketio 5.x) |
+
+### Venv / Environment Quick Reference
+
+```bash
+# Activate venv
+source .venv/bin/activate          # Linux/macOS
+.venv\Scripts\activate             # Windows
+
+# Check venv is active
+which python                        # Should point to .venv/bin/python
+
+# Deactivate when done
+deactivate
+
+# Reinstall everything (if dependencies get corrupted)
+pip install --force-reinstall -e ".[dev]"
+
+# Check what's installed
+pip list | grep -iE "flask|celery|sqlalchemy|pydantic"
+```
+
+### Quick Reset (Start Over From Scratch)
+
+```bash
+# Stop all containers and delete volumes (database is gone!)
+docker compose -f docker-compose.db.yml down -v
+
+# Delete the venv
+rm -rf .venv
+
+# Delete migrations (regenerate from scratch)
+rm -rf migrations/versions/*
+touch migrations/versions/.gitkeep
+
+# Recreate everything
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+docker compose -f docker-compose.db.yml up -d
+flask db init
+flask db migrate -m "initial"
+flask db upgrade
+python run.py
+```
+
+### Checklist: "My App Won't Start"
+
+Work through these in order:
+
+1. ☐ Is the venv activated? `which python`
+2. ☐ Are deps installed? `pip list | grep -i flask`
+3. ☐ Is Postgres running? `docker compose -f docker-compose.db.yml ps`
+4. ☐ Are you in the right directory? `pwd` (should be `.../api`)
+5. ☐ Does `.env` exist? `cat .env`
+6. ☐ Are future-phase blueprint imports commented out in `app/__init__.py`?
+7. ☐ Have migrations been run? `flask db upgrade`
+8. ☐ Is port 5000 free? `lsof -i :5000`
+9. ☐ Read the actual error message — what line in which file?
