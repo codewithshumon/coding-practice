@@ -1,7 +1,7 @@
 # Django — Complete Guide
 
 > **Series:** Framework Documentation
-> Django + Django REST Framework (DRF) — the batteries-included Python web framework. Related: `case/database/databases.md` (PostgreSQL §1–11, Database Optimization §45–55), `case/api/apis-and-communication.md` (REST §1–8), `case/security/security-and-auth.md` (Auth §9–24).
+> Django + Django REST Framework (DRF) — the batteries-included Python web framework. Related: `case/database/databases.md` (PostgreSQL §1–11, Database Optimization §45–55), `case/api/apis-and-communication.md` (REST §1–8), `case/security/security-and-auth.md` (Auth §9–24), `case/structures-architecture/design-patterns.md` (MVT §13–18).
 
 ---
 

@@ -1,7 +1,7 @@
 # Architecture Patterns — Complete Guide
 
 > **Series:** Structures & Architecture Documentation — Part 2
-> This file goes deep on **four applied architecture patterns**: Microservices, Event-Driven Architectures, Multi-Tenant SaaS, and Serverless Architectures. Part 1 (`backend-systems.md`) covered the fundamentals (DSA, Backend/Software Architecture, Distributed Systems, etc.); this file expands the patterns that build on them. More topics (CQRS, Hexagonal deep-dive, Messaging) will be added later.
+> This file goes deep on **four applied architecture patterns**: Microservices, Event-Driven Architectures, Multi-Tenant SaaS, and Serverless Architectures. Part 1 (`backend-systems.md`) covered the fundamentals (DSA, Backend/Software Architecture, Distributed Systems, etc.); Part 3 (`design-patterns.md`) covers MVC, MVP, MVT, MVVM, and structural patterns. This file expands the applied architecture patterns. More topics (CQRS, Hexagonal deep-dive, Messaging) will be added later.
 
 ---
 
