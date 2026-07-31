@@ -1,7 +1,7 @@
 # NestJS — Complete Guide
 
 > **Series:** Framework Documentation
-> NestJS — the progressive, opinionated Node.js framework (Angular-inspired, TypeScript-first). Related: `case/api/apis-and-communication.md` (REST §1–8), `case/state-management/react-state-management.md`, `case/security/security-and-auth.md` (JWT §17–24), `case/framework/expressjs/expressjs.md`.
+> NestJS — the progressive, opinionated Node.js framework (Angular-inspired, TypeScript-first). Related: `case/api/apis-and-communication.md` (REST §1–8), `case/state-management/react-state-management.md`, `case/security/security-and-auth.md` (JWT §17–24), `case/framework/expressjs/expressjs.md`, `case/framework/angular/angular.md` (the frontend counterpart — same patterns, server-side).
 
 ---
 

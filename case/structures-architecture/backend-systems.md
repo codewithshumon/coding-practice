@@ -1,7 +1,7 @@
 # Structures, Architecture & System Design — Complete Guide
 
 > **Series:** Structures & Architecture Documentation — Part 1
-> This file holds the **core backend & systems-engineering concepts**: Data Structures & Algorithms, Backend Architecture, Distributed Systems, Scalable APIs, Software Architecture, Performance Tuning, and System Optimization. More topics (Design Patterns, Concurrency, Messaging) will be added as separate files later.
+> This file holds the **core backend & systems-engineering concepts**: Data Structures & Algorithms, Backend Architecture, Distributed Systems, Scalable APIs, Software Architecture, Performance Tuning, and System Optimization. Related: `case/structures-architecture/design-patterns.md` (MVC, MVP, MVT, MVVM & structural patterns). More topics (Concurrency, Messaging) will be added as separate files later.
 
 ---
 
