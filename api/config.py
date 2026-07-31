@@ -34,6 +34,16 @@ class BaseConfig:
     RATELIMIT_STORAGE_URI: str = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
     RATELIMIT_DEFAULT: str = "200 per day;50 per hour"
 
+    # ── Swagger / Flasgger ──
+    SWAGGER: dict = {
+        "title": "Flask Learning API",
+        "description": "Production-grade Flask REST API — learning lab. All routes except /health require an X-API-Key header.",
+        "version": "0.1.0",
+        "uiversion": 3,
+        "openapi": "3.0.3",
+        "specs_route": "/apidocs/",
+    }
+
 
 class DevelopmentConfig(BaseConfig):
     """Local dev — verbose errors, auto-reload."""

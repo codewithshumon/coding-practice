@@ -4,9 +4,11 @@ Every environment (dev, test, prod) calls create_app() with different config.
 """
 
 import logging
+import os
 from logging.config import dictConfig
 from pathlib import Path
 
+from flasgger import Swagger
 from flask import Flask
 
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
@@ -21,8 +23,6 @@ CONFIG_MAP = {
 
 def configure_logging() -> None:
     """Structured JSON-line logging. In dev, plain-text for readability."""
-    import os
-
     is_prod = os.getenv("FLASK_ENV") == "production"
     handler_class = "logging.StreamHandler"
 
@@ -57,8 +57,6 @@ def create_app(env: str | None = None):
         env: 'development' | 'testing' | 'production'.
              Defaults to FLASK_ENV env var, falling back to 'development'.
     """
-    import os
-
     flask_env = env or os.getenv("FLASK_ENV", "development")
     config_class = CONFIG_MAP.get(flask_env, DevelopmentConfig)
 
@@ -89,6 +87,12 @@ def create_app(env: str | None = None):
             content_security_policy=None,
             force_https=False,  # set True behind a real load balancer
         )
+
+    # ── Swagger / Flasgger (API documentation auto-generated from route docstrings) ──
+    from flasgger import Swagger
+
+    swagger_config = app.config.get("SWAGGER", {})
+    Swagger(app, template=swagger_config.get("template", {}), config=swagger_config)
 
     # ── Register blueprints (each module's routes) ──
     from app.modules.health.routes import health_bp

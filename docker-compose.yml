@@ -1,0 +1,41 @@
+# Standalone database services for local development.
+# Start with:  docker compose -f docker-compose.db.yml up -d
+# Stop with:   docker compose -f docker-compose.db.yml down
+# Logs:        docker compose -f docker-compose.db.yml logs -f
+
+services:
+  # ── PostgreSQL ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: flask-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: flask
+      POSTGRES_PASSWORD: flask
+      POSTGRES_DB: flask_learn
+    ports:
+      - "5600:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flask -d flask_learn"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── pgAdmin (browser-based DB GUI) ──
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: flask-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata_dev:
