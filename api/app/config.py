@@ -42,6 +42,13 @@ class BaseConfig:
         "uiversion": 3,
         "openapi": "3.0.3",
         "specs_route": "/apidocs/",
+        "specs": [
+            {
+                "endpoint": "apispec",
+                "route": "/apispec.json",
+            },
+        ],
+        "headers": [],
     }
 
 

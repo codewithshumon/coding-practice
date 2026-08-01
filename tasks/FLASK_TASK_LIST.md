@@ -408,6 +408,13 @@ class BaseConfig:
         "uiversion": 3,
         "openapi": "3.0.3",
         "specs_route": "/apidocs/",
+        "specs": [
+            {
+                "endpoint": "apispec",
+                "route": "/apispec.json",
+            },
+        ],
+        "headers": [],
     }
 
 
@@ -622,12 +629,14 @@ app = create_app()
 
 ```python
 """Development server entry point."""
-from app import create_app, socketio
+from app import create_app
+from app.extensions import socketio
 
 app = create_app()
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=app.config["PORT"], debug=True)
+    socketio.run(app, host="0.0.0.0", port=app.config["PORT"], debug=True,
+                  allow_unsafe_werkzeug=True)
 ```
 
 **Note:** `from app import socketio` imports from `app.extensions`, which is available because `app/__init__.py` imports it.
