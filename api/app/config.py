@@ -40,7 +40,8 @@ class BaseConfig:
         "description": "Production-grade Flask REST API — all routes except /health require X-API-Key header.",
         "version": "0.1.0",
         "uiversion": 3,
-        "openapi": "3.0.3",
+        "static_url_path": "/flasgger_static",
+        "openapi": "3.0.2",
         "specs_route": "/apidocs/",
         "specs": [
             {
