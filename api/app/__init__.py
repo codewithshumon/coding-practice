@@ -81,8 +81,10 @@ def create_app(env: str | None = None):
     # BLUEPRINTS — add import + register line per module as you build them
     # =====================================================================
     from app.modules.health.routes import health_bp        # Step 0.12
+    from app.modules.items.routes import items_bp   
 
     app.register_blueprint(health_bp)
+    app.register_blueprint(items_bp)
     # NEW_BLUEPRINT_IMPORT   ← add blueprint imports above this line
     # NEW_BLUEPRINT_REGISTER ← add app.register_blueprint() above this line
 
@@ -101,8 +103,13 @@ def create_app(env: str | None = None):
     # =====================================================================
     # (Step 9.1) from app.modules.websocket import events  # noqa: F401
 
+
     # ── Model discovery for Flask-Migrate ──
-    # (Step 2.2) from app.modules.items import models    # noqa: F401
+    from app.modules.items import models
+
+
+
+
     # (Step 5.1) from app.modules.users import models    # noqa: F401
     # NEW_MODEL_IMPORT ← add model imports above this line (after all blueprints)
 
