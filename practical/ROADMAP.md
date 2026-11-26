@@ -1,6 +1,6 @@
 # Senior DevOps Engineer — Production-Grade Local Practice Roadmap
 
-**Environment:** Kali Linux (12 threads, 15 GiB RAM) + Docker + `k3d` + LocalStack (AWS)  
+**Environment:** Kali Linux (12 threads, 15 GiB RAM) + Docker + `kind` (upstream K8s) + LocalStack (AWS)  
 **Rule:** Strictly one step at a time. Each step has its own folder/files inside `practical/`.
 
 ---
@@ -9,7 +9,7 @@
 
 - [ ] **Step 1: Production Docker** — Multi-stage builds, non-root user, minimal image, `.dockerignore`, healthchecks, resource limits, Trivy image scan
 - [ ] **Step 2: Linux & Nginx Production Reverse Proxy** — TLS/SSL termination, security headers, rate limiting, upstream health, log & port debugging
-- [ ] **Step 3: Kubernetes (`k3d`) Production Primitives** — Namespaces, RBAC, probes (liveness/readiness/startup), resource requests/limits, HPA, NetworkPolicy, PDB
+- [ ] **Step 3: Kubernetes (`kind`) Production Primitives** — Multi-node upstream `k8s`, NGINX Ingress, Namespaces, RBAC, probes, resource requests/limits, HPA, NetworkPolicy, PDB
 - [ ] **Step 4: Helm Packaging** — Production chart structure, `values-dev.yaml` vs `values-prod.yaml`, rollbacks
 - [ ] **Step 5: GitOps with Argo CD** — Pull-based deployment, auto-sync, self-heal, drift detection, App-of-Apps
 - [ ] **Step 6: CI/CD Pipeline** — Lint, unit/integration tests, container scan, build & tag, GitOps manifest update (`act` / GitHub Actions / Jenkins)
