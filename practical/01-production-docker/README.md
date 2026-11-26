@@ -1,58 +1,57 @@
-# Step 1: Production-Grade Docker
+# Step 1: Production-Grade Docker (Node.js + Python + Go)
 
-## What You're Practicing Here (Real-World Standards)
-1. **Multi-stage build (`builder` -> `runtime`)** — Keeps build tools/caches out of the final production image.
-2. **Pinned minimal base (`node:22-alpine`)** — Smaller attack surface and faster pulls in EKS/AKS/GKE.
-3. **`.dockerignore`** — Prevents `.git`, `.env`, and `node_modules` from leaking secrets or slowing builds.
-4. **Non-root user (`USER appuser`)** — Required in production Kubernetes (Pod Security `restricted` profile).
-5. **Exec-form `CMD ["node", "app.js"]`** — Ensures `SIGTERM` reaches Node directly for zero-downtime rolling updates.
-6. **`HEALTHCHECK` + `/health` endpoint** — Returns `503` during graceful shutdown so load balancers stop routing traffic.
+Now you have **3 real polyglot microservices**, each built with production best practices:
+
+| Service | Port | Base / Runtime | Key Production Practice |
+| :--- | :--- | :--- | :--- |
+| **node-api** | `3000` | `node:22-alpine` (multi-stage) | Non-root `appuser`, `HEALTHCHECK`, `SIGTERM` graceful shutdown |
+| **python-api** | `5000` | `python:3.12-alpine` | `PYTHONDONTWRITEBYTECODE=1`, `PYTHONUNBUFFERED=1`, non-root `appuser`, `SIGTERM` |
+| **go-api** | `8080` | `golang:1.23-alpine` -> `distroless:nonroot` | Static binary (`-ldflags="-s -w"`), **~10 MB** image with **no shell** |
 
 ---
 
-## Hands-On Commands (Run in this directory)
+## Hands-On Commands
 
-### 1. Build the production image
 ```bash
 cd /home/shumon/Documents/coding-practice/practical/01-production-docker
-docker build -t prod-api-demo:1.0.0 .
 ```
 
-### 2. Check image size & layers
+### 1. Build all 3 production images
 ```bash
-docker images prod-api-demo:1.0.0
-docker history prod-api-demo:1.0.0
+docker build -t node-api:1.0.0 ./node-api
+docker build -t python-api:1.0.0 ./python-api
+docker build -t go-api:1.0.0 ./go-api
 ```
 
-### 3. Run with production resource limits & read-only root filesystem
+### 2. Compare image sizes
 ```bash
-docker run -d \
-  --name prod-api \
-  --cpus="0.5" \
-  --memory="128m" \
-  --read-only \
-  --security-opt=no-new-privileges:true \
-  -p 3000:3000 \
-  prod-api-demo:1.0.0
+docker images | grep -E "node-api|python-api|go-api"
+```
+Notice how tiny `go-api` is compared to `node-api` and `python-api`!
+
+### 3. Run all 3 with production hardening (`--read-only`, resource limits, no new privileges)
+```bash
+docker run -d --name node-api   --cpus="0.5" --memory="128m" --read-only --security-opt=no-new-privileges:true -p 3000:3000 node-api:1.0.0
+docker run -d --name python-api --cpus="0.5" --memory="128m" --read-only --security-opt=no-new-privileges:true -p 5000:5000 python-api:1.0.0
+docker run -d --name go-api     --cpus="0.5" --memory="64m"  --read-only --security-opt=no-new-privileges:true -p 8080:8080 go-api:1.0.0
 ```
 
-### 4. Verify non-root user, healthcheck & endpoints
+### 4. Test endpoints & non-root users
 ```bash
-docker exec prod-api id
 curl -s http://localhost:3000/ | jq .
-curl -s http://localhost:3000/health | jq .
-docker inspect --format='{{.State.Health.Status}}' prod-api
+curl -s http://localhost:5000/ | jq .
+curl -s http://localhost:8080/ | jq .
+
+docker exec node-api id
+docker exec python-api id
+# Note: go-api uses distroless (no shell), so `docker exec go-api id` won't run — that's extra security!
 ```
 
-### 5. Test graceful shutdown (`SIGTERM`)
+### 5. Test graceful shutdown (`SIGTERM`) & clean up
 ```bash
-docker stop prod-api
-docker logs prod-api
-docker rm prod-api
+docker stop node-api python-api go-api
+docker logs --tail 3 node-api
+docker logs --tail 3 python-api
+docker logs --tail 3 go-api
+docker rm node-api python-api go-api
 ```
-You should see `Received SIGTERM. Starting graceful shutdown...` and `All connections closed. Exiting cleanly.`
-
----
-
-## Next
-Once you run and verify these commands, tell me **"done"** (or paste any error) and we will move to **Step 2: Linux & Nginx Production Reverse Proxy**.

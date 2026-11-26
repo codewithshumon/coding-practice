@@ -1,8 +1,8 @@
 services:
   prod-api:
     build:
-      context: ../01-production-docker
-    image: prod-api-demo:1.0.0
+      context: ../01-production-docker/node-api
+    image: node-api:1.0.0
     container_name: prod-api
     read_only: true
     security_opt:
