@@ -21,7 +21,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -subj "/CN=localhost"
 ```
 
-### 2. Start Nginx + `prod-api` together
+### 2. Start Nginx (standalone — no app containers)
 ```bash
 docker compose up -d
 ```
@@ -34,8 +34,8 @@ ss -tulpn | grep -E '8080|8443'
 
 ### 4. Test HTTP -> HTTPS redirect, TLS, and security headers
 ```bash
-curl -i http://localhost:8080/
-curl -vk https://localhost:8443/
+curl -i http://localhost:8080/health
+curl -vk https://localhost:8443/health
 ```
 Verify:
 - `HTTP/1.1 301 Moved Permanently` on port `8080`.
@@ -47,7 +47,7 @@ for i in $(seq 1 20); do
   curl -sk -o /dev/null -w "%{http_code}\n" https://localhost:8443/
 done
 ```
-You should see `200` for the first ~11 requests, then `429`.
+You should see `429` after the burst limit (even if no backend is listening yet, rate limiting triggers at the edge!).
 
 ### 6. Inspect structured JSON logs
 ```bash

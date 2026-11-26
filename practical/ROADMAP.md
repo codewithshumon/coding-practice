@@ -1,19 +1,24 @@
-# Senior DevOps Engineer — Production-Grade Local Practice Roadmap
+# Senior DevOps Engineer — Real-World Cloud Production Roadmap
 
-**Environment:** Kali Linux (12 threads, 15 GiB RAM) + Docker + `kind` (upstream K8s) + LocalStack (AWS)  
-**Rule:** Strictly one step at a time. Each step has its own folder/files inside `practical/`.
+**Target:** AWS EKS / Azure AKS / GCP GKE production practices  
+**Local Engine:** `kind` (upstream `k8s`) + Local Registry + LocalStack (AWS)  
+**Strict Rules:**
+- **No `docker run` or `docker compose` to run apps or services.**
+- **CI (GitHub Actions / Jenkins)** runs the pipeline, and **BuildKit** builds & pushes the image inside it.
+- Everything runs **inside Kubernetes (`kind`)** just like real cloud production.
+- **One step at a time.**
 
 ---
 
 ## Steps
 
-- [x] **Step 1: Production Docker** — Multi-stage builds, non-root user, minimal image, `.dockerignore`, healthchecks, resource limits, Trivy image scan
-- [ ] **Step 2: Linux & Nginx Production Reverse Proxy** — TLS/SSL termination, security headers, rate limiting, upstream health, log & port debugging
-- [ ] **Step 3: Kubernetes (`kind`) Production Primitives** — Multi-node upstream `k8s`, NGINX Ingress, Namespaces, RBAC, probes, resource requests/limits, HPA, NetworkPolicy, PDB
-- [ ] **Step 4: Helm Packaging** — Production chart structure, `values-dev.yaml` vs `values-prod.yaml`, rollbacks
-- [ ] **Step 5: GitOps with Argo CD** — Pull-based deployment, auto-sync, self-heal, drift detection, App-of-Apps
-- [ ] **Step 6: CI/CD Pipeline** — Lint, unit/integration tests, container scan, build & tag, GitOps manifest update (`act` / GitHub Actions / Jenkins)
-- [ ] **Step 7: Terraform + Cloud (AWS via LocalStack, plus Azure & GCP mapping)** — Modular IaC, state management, IAM least privilege, VPC/networking, managed K8s (EKS / AKS / GKE)
-- [ ] **Step 8: Ansible Configuration Management** — Idempotent playbooks, roles, Linux hardening against local container targets
-- [ ] **Step 9: Production Observability (Prometheus, Grafana, Loki)** — Metrics, dashboards, alerting rules, centralized logging
-- [ ] **Step 10: Secrets & Zero-Trust Security** — HashiCorp Vault / Sealed Secrets, JWT/OAuth2 flow, TLS rotation
+- [x] **Step 1: Production Container Images (`Dockerfile`s)** — Multi-stage, non-root, minimal/distroless images for `node-api`, `python-api`, `go-api`
+- [ ] **Step 2: Kubernetes (`kind`) Cluster + Local Registry** — Multi-node upstream `k8s` (`1 control-plane + 2 workers`) + local OCI registry (simulating ECR/ACR/Artifact Registry)
+- [ ] **Step 3: NGINX Ingress Controller + TLS + Production Primitives** — Deploy `node-api`, `python-api`, `go-api` in `kind` with NGINX Ingress, TLS, namespaces, RBAC, probes, resource limits, HPA, NetworkPolicy, PDB
+- [ ] **Step 4: Helm Packaging** — Production chart for the 3 services (`values-dev.yaml` / `values-prod.yaml`), upgrades & rollbacks
+- [ ] **Step 5: GitOps with Argo CD** — Pull-based deployment in `kind`, auto-sync, self-heal, drift detection
+- [ ] **Step 6: CI/CD with GitHub Actions / Jenkins + BuildKit** — Test, scan (Trivy), BuildKit build & push image, update GitOps repo
+- [ ] **Step 7: Terraform + Cloud (AWS via LocalStack)** — Modular IaC, state management, IAM least privilege, VPC, EKS/AKS/GKE patterns
+- [ ] **Step 8: Ansible** — Idempotent Linux hardening & config management
+- [ ] **Step 9: Production Observability (Prometheus + Grafana + Loki)** — Running inside `kind` for metrics, alerts, and logs
+- [ ] **Step 10: Secrets & Zero-Trust Security** — Sealed Secrets / Vault, TLS rotation, Pod Security Standards
