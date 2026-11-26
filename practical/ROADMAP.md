@@ -7,7 +7,7 @@
 
 ## Steps
 
-- [ ] **Step 1: Production Docker** — Multi-stage builds, non-root user, minimal image, `.dockerignore`, healthchecks, resource limits, Trivy image scan
+- [x] **Step 1: Production Docker** — Multi-stage builds, non-root user, minimal image, `.dockerignore`, healthchecks, resource limits, Trivy image scan
 - [ ] **Step 2: Linux & Nginx Production Reverse Proxy** — TLS/SSL termination, security headers, rate limiting, upstream health, log & port debugging
 - [ ] **Step 3: Kubernetes (`kind`) Production Primitives** — Multi-node upstream `k8s`, NGINX Ingress, Namespaces, RBAC, probes, resource requests/limits, HPA, NetworkPolicy, PDB
 - [ ] **Step 4: Helm Packaging** — Production chart structure, `values-dev.yaml` vs `values-prod.yaml`, rollbacks
