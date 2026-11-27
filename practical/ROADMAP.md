@@ -13,7 +13,7 @@
 ## Steps
 
 - [x] **Step 1: Production Container Images (`Dockerfile`s)** — Multi-stage, non-root, minimal/distroless images for `node-api`, `python-api`, `go-api`
-- [ ] **Step 2: Kubernetes (`kind`) Cluster + Local Registry** — Multi-node upstream `k8s` (`1 control-plane + 2 workers`) + local OCI registry (simulating ECR/ACR/Artifact Registry)
+- [x] **Step 2: Kubernetes (`kind`) Cluster + Local Registry** — Multi-node upstream `k8s` (`1 control-plane + 2 workers`) + local OCI registry (simulating ECR/ACR/Artifact Registry)
 - [ ] **Step 3: NGINX Ingress Controller + TLS + Production Primitives** — Deploy `node-api`, `python-api`, `go-api` in `kind` with NGINX Ingress, TLS, namespaces, RBAC, probes, resource limits, HPA, NetworkPolicy, PDB
 - [ ] **Step 4: Helm Packaging** — Production chart for the 3 services (`values-dev.yaml` / `values-prod.yaml`), upgrades & rollbacks
 - [ ] **Step 5: GitOps with Argo CD** — Pull-based deployment in `kind`, auto-sync, self-heal, drift detection
