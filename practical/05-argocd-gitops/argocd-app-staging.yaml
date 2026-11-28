@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: polyglot-staging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/codewithshumon/coding-practice.git
+    targetRevision: HEAD
+    path: practical/04-helm-packaging/polyglot-api
+    helm:
+      valueFiles:
+        - values-dev.yaml
+      parameters:
+        - name: ingress.host
+          value: staging-api.localtest.me
+        - name: ingress.tlsSecretName
+          value: staging-api-tls-secret
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: staging
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources removed from Git
+      selfHeal: true   # Auto-revert manual kubectl edits/drift
+    syncOptions:
+      - CreateNamespace=true
