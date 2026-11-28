@@ -5,6 +5,7 @@ Instead of duplicating YAML for `dev`, `staging`, and `prod`, we packaged all 3 
 ---
 
 ## 1. Install `helm` (if not installed)
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 helm version
@@ -13,6 +14,7 @@ helm version
 ---
 
 ## 2. Lint & Dry-Run Render (Validate Before Deploying)
+
 ```bash
 cd /home/shumon/Documents/coding-practice/practical/04-helm-packaging
 
@@ -26,6 +28,7 @@ helm template polyglot-dev ./polyglot-api -f ./polyglot-api/values-dev.yaml | he
 ---
 
 ## 3. Deploy to `dev` Namespace via Helm
+
 ```bash
 kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
 kubectl label namespace dev pod-security.kubernetes.io/enforce=restricted --overwrite
@@ -47,6 +50,7 @@ helm upgrade --install polyglot-dev ./polyglot-api \
 ---
 
 ## 4. Verify & Test `dev` Endpoints
+
 ```bash
 helm list -n dev
 kubectl get pods,ingress -n dev
@@ -59,6 +63,7 @@ curl -sk --resolve dev-api.localtest.me:443:127.0.0.1 https://dev-api.localtest.
 ---
 
 ## 5. Practice Helm Upgrade & Rollback
+
 ```bash
 # Upgrade: scale node-api to 2 replicas in dev
 helm upgrade polyglot-dev ./polyglot-api -n dev -f ./polyglot-api/values-dev.yaml --set services.node-api.replicas=2
@@ -73,4 +78,5 @@ kubectl get pods -n dev
 ---
 
 ## Next
+
 Tell me **"done"** once you've tested `helm upgrade` and `helm rollback`, and we'll move to **Step 5: GitOps with Argo CD**.
