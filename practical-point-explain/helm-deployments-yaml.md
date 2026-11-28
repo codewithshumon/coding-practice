@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/04-helm-packaging/polyglot-api/templates/deployments.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Uses a Helm `range` loop over `.Values.services` to dynamically generate hardened `Deployment` manifests for all microservices (`node-api`, `python-api`, `go-api`), injecting replicas, `image:tag`, ports, `toYaml` resources, `RollingUpdate` (`maxUnavailable: 0`, `maxSurge: 1`), `restricted` securityContext, and `/health` readiness/liveness probes from `values.yaml`.
+* **Why it is needed:** Eliminates duplicating hundreds of lines of Deployment YAML across services and environments (`dev`/`staging`/`prod`), while letting CI/CD bump image tags with `--set` or separate `values-*.yaml` files.
+* **Real-world production example:** A platform team maintains 1 Helm chart for 10 microservices; deploying a new release to `prod` is just `helm upgrade --set services.node-api.tag=1.0.5` with zero-downtime rolling updates.
+
+---
+
 Instead of copy-pasting 3 separate `Deployment` files (`node-api`, `python-api`, `go-api`), this single Helm template **loops over `.Values.services`** from `values.yaml` and generates all 3 `Deployment` manifests dynamically!
 
 ---

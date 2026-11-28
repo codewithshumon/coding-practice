@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/03-k8s-nginx-ingress-and-apps/01-namespace-and-security.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Creates the `prod` namespace and wraps it with 3 guardrails: **Pod Security Standards (`restricted`)**, a **ResourceQuota** (`2` CPU / `1Gi` RAM requests, `4` CPU / `2Gi` RAM limits, max `20` pods), a **LimitRange** (per-container defaults: `50m`/`64Mi` request, `200m`/`128Mi` limit), and a **zero-trust `NetworkPolicy`** (`allow-only-ingress-nginx`).
+* **Why it is needed:** Without it, any developer could deploy `root` containers, omit CPU/RAM limits and crash a node, or allow Pods in other namespaces to bypass Ingress and hit backend APIs directly.
+* **Real-world production example:** Before an enterprise team deploys any app to AWS EKS `prod`, the platform team applies this baseline file so every workload automatically obeys strict security, cost/resource budgets, and firewall rules.
+
+---
+
 This file uses `---` (YAML document separators) to define **4 Kubernetes resources** in one file:
 
 1. `Namespace` (Lines 1–9)

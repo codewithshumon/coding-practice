@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/04-helm-packaging/polyglot-api/templates/ingress.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Conditionally (`{{- if .Values.ingress.enabled }}`) creates 1 `Ingress` (`{{ .Release.Name }}-ingress`) with NGINX annotations (`rewrite-target: /$2`, `ssl-redirect: "true"`, `limit-rps` with `| quote`), TLS (`host` + `tlsSecretName`), and a `range` loop **inside `paths:`** that maps every service's `path` (`/node`, `/python`, `/go`) to its `Service` and `port`.
+* **Why it is needed:** Allows `dev`, `staging`, and `prod` to use different domains, TLS secrets, and rate limits via `values.yaml`, while automatically adding new microservice routes to the single edge `Ingress`.
+* **Real-world production example:** One chart deploys `api.staging.company.com` (with `limit-rps: "50"`) and `api.company.com` (with `limit-rps: "10"`) behind NGINX Ingress + Let's Encrypt TLS.
+
+---
+
 ```yaml
 {{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1

@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/03-k8s-nginx-ingress-and-apps/04-hpa-and-rbac.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Defines a `HorizontalPodAutoscaler` (`node-api-hpa`, scaling `node-api` between `2` and `5` replicas at `70%` CPU utilization) and least-privilege RBAC (`Role` `prod-readonly` allowing only `get`/`list`/`watch` on `pods`, `pods/log`, `services`, `deployments`, `ingresses`—excluding `secrets` and `pods/exec`—bound via `RoleBinding` to `api-workload-sa`).
+* **Why it is needed:** Handles sudden traffic spikes automatically without over-paying for idle Pods 24/7, while ensuring read-only viewers cannot delete workloads, exec into containers, or read database/TLS secrets.
+* **Real-world production example:** During a flash sale, HPA scales API Pods up from 2 to 5 automatically (and back down at night), while developers debugging an issue only get read-only `prod` access (`prod-readonly`) instead of cluster-admin rights.
+
+---
+
 This file uses `---` separators to define **3 production scaling and access-control resources**:
 1. `HorizontalPodAutoscaler` (`node-api-hpa`) — Automatic Pod scaling based on CPU usage
 2. `Role` (`prod-readonly`) — Least-privilege read-only permissions inside `prod`

@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/03-k8s-nginx-ingress-and-apps/03-ingress-tls.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Creates a single `Ingress` (`polyglot-api-ingress`) for host `api.localtest.me` using `ingressClassName: nginx`, TLS termination (`api-tls-secret`), forced HTTPS redirect (`ssl-redirect: "true"`), per-IP rate limiting (`10` RPS), URL path rewriting (`rewrite-target: /$2`), and path routing (`/node` $\rightarrow$ `node-api:3000`, `/python` $\rightarrow$ `python-api:5000`, `/go` $\rightarrow$ `go-api:8080`).
+* **Why it is needed:** Internal `ClusterIP` Services cannot be reached from outside Kubernetes, and each microservice only knows routes like `/` and `/health` (not `/node/...`). `Ingress` exposes all 3 securely behind one HTTPS endpoint.
+* **Real-world production example:** A SaaS platform using 1 AWS Load Balancer + NGINX Ingress at `https://api.company.com` to terminate Let's Encrypt TLS, rate-limit abusive clients, and route `/node`, `/python`, and `/go` to separate backend teams.
+
+---
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress

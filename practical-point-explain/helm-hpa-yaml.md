@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/04-helm-packaging/polyglot-api/templates/hpa.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Conditionally (`{{- if .Values.hpa.enabled }}`) loops over `.Values.services` to generate a `HorizontalPodAutoscaler` (`autoscaling/v2`) for every service, using `minReplicas`, `maxReplicas`, and `targetCPUUtilizationPercentage` from `values.yaml`.
+* **Why it is needed:** Lets you turn autoscaling **off** in `dev` (`hpa.enabled: false`) to save resources and **on** in `prod` (`hpa.enabled: true`) across all services from a single template.
+* **Real-world production example:** Using the same Helm chart in `values-dev.yaml` (fixed 1 Pod, no HPA) and `values-prod.yaml` (auto-scaling 2–10 Pods at 70% CPU during peak traffic).
+
+---
+
 ```yaml
 {{- if .Values.hpa.enabled }}
 {{- range $name, $svc := .Values.services }}

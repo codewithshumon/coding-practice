@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/04-helm-packaging/polyglot-api/templates/_helpers.tpl`
 
+## Short Summary (TL;DR)
+* **What this file does:** Defines a reusable Helm named template (`"polyglot-api.labels"`) that outputs 3 standard Kubernetes/Helm labels: `app.kubernetes.io/managed-by`, `helm.sh/chart`, and `app.kubernetes.io/instance`. The `_` filename prefix tells Helm it is a helper partial, not a K8s manifest.
+* **Why it is needed:** Avoids copy-pasting identical metadata labels across every template file (`Deployment`, `Service`, `Ingress`, `HPA`, `PDB`) and keeps chart/release tracking consistent.
+* **Real-world production example:** In a cluster managed by Helm, Terraform, and Argo CD, `managed-by: Helm` + `helm.sh/chart` lets on-call engineers immediately see which chart version owns a resource and prevents accidental manual `kubectl edit` changes.
+
+---
+
 ```gotemplate
 {{- define "polyglot-api.labels" -}}
 app.kubernetes.io/managed-by: {{ .Release.Service }}

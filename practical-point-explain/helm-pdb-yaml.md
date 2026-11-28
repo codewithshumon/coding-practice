@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/04-helm-packaging/polyglot-api/templates/pdb.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Conditionally (`{{- if .Values.pdb.enabled }}`) loops over `.Values.services` to generate a `PodDisruptionBudget` (`policy/v1`) for each service (`{{ $name }}-pdb`) enforcing `minAvailable` from `values.yaml`.
+* **Why it is needed:** Prevents cluster maintenance (`kubectl drain`, node OS upgrades, autoscaler scale-down) from evicting all Pods of a service at once in `prod`, while allowing `pdb.enabled: false` in `dev` (where `replicas: 1` would otherwise block node drains).
+* **Real-world production example:** During automated EKS worker node upgrades, `prod` keeps `minAvailable: 1` so at least 1 Pod per API stays online at all times, while `dev` disables PDBs so nodes can drain freely.
+
+---
+
 ```yaml
 {{- if .Values.pdb.enabled }}
 {{- range $name, $svc := .Values.services }}

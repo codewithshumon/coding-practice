@@ -2,6 +2,13 @@
 
 Source file: `/home/shumon/Documents/coding-practice/practical/03-k8s-nginx-ingress-and-apps/02-apps.yaml`
 
+## Short Summary (TL;DR)
+* **What this file does:** Deploys all 3 microservices (`node-api` on `:3000`, `python-api` on `:5000`, `go-api` on `:8080`) into `prod` using 1 shared tokenless `ServiceAccount` (`api-workload-sa`) plus a `Deployment` (`replicas: 2`, `RollingUpdate` with `maxUnavailable: 0` / `maxSurge: 1`, `restricted` securityContext, `readinessProbe` + `livenessProbe`), `ClusterIP` `Service`, and `PodDisruptionBudget` (`minAvailable: 1`) for each service.
+* **Why it is needed:** Raw `Pod` manifests don't self-heal, don't load-balance, and cause downtime on updates. This file gives high availability, zero-downtime rollouts, node-upgrade protection, and container-level security.
+* **Real-world production example:** An e-commerce backend running Node, Python, and Go APIs in EKS—when a new version is released or a worker node is drained for OS patching, traffic keeps flowing with zero dropped requests.
+
+---
+
 This file deploys all **3 microservices** (`node-api`, `python-api`, `go-api`) into the `prod` namespace using **10 Kubernetes resources**:
 * 1 shared **`ServiceAccount`** (`api-workload-sa`)
 * For each of the 3 services: a **`Deployment`**, a **`Service`**, and a **`PodDisruptionBudget` (PDB)**
