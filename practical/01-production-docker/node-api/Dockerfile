@@ -20,15 +20,15 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-# Create a non-root user & group (required by K8s Pod Security Standards)
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create a non-root user & group with numeric UID (required by K8s runAsNonRoot)
+RUN addgroup -S -g 10001 appgroup && adduser -S -u 10001 appuser -G appgroup
 
 # Copy dependencies and source with proper ownership
-COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
-COPY --chown=appuser:appgroup package.json app.js ./
+COPY --from=builder --chown=10001:10001 /app/node_modules ./node_modules
+COPY --chown=10001:10001 package.json app.js ./
 
-# Drop root privileges
-USER appuser
+# Drop root privileges using numeric UID
+USER 10001
 
 EXPOSE 3000
 

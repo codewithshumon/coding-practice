@@ -22,11 +22,16 @@ curl -s http://localhost:5001/v2/_catalog
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 
-# Wait until NGINX Ingress Pod is Ready
+# Pin NGINX Ingress onto the control-plane node (where ports 80/443 are mapped)
+kubectl patch deployment ingress-nginx-controller -n ingress-nginx \
+  --type='json' \
+  -p='[{"op":"add","path":"/spec/template/spec/nodeSelector/ingress-ready","value":"true"}]'
+
+# Wait until NGINX Ingress Pod is Ready (image pull can take ~2-3 min on first run)
 kubectl wait --namespace ingress-nginx \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
-  --timeout=120s
+  --timeout=300s
 ```
 
 ---

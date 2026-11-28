@@ -9,12 +9,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create non-root user with numeric UID (required by K8s runAsNonRoot)
+RUN addgroup -S -g 10001 appgroup && adduser -S -u 10001 appuser -G appgroup
 
-COPY --chown=appuser:appgroup app.py ./
+COPY --chown=10001:10001 app.py ./
 
-USER appuser
+USER 10001
 
 EXPOSE 5000
 
