@@ -24,24 +24,27 @@ git push origin HEAD
 
 ---
 
-## Step 2: Install Argo CD inside `kind` (`lines 18–26`)
+## Step 2: Install Argo CD inside `kind` (`lines 20–29`)
 
 ```bash
-kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
+# Wait for Argo CD server to be Ready (image pull takes ~2-3 min on first install)
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
 kubectl get pods -n argocd
 ```
 
-* **`kubectl create namespace argocd`**
-  * **What it does:** Creates the dedicated `argocd` namespace where Argo CD's control-plane components will run.
-  * **Why it is needed:** Keeps Argo CD's pods, CRDs, and secrets isolated from your application namespaces (`dev`, `staging`, `prod`).
-  * **Real-world production example:** Every production cluster keeps platform tools in their own namespaces (`argocd`, `ingress-nginx`, `monitoring`).
-* **`kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml`**
-  * **What it does:** Downloads and installs Argo CD's official `stable` manifest (API server, repo-server, application-controller, Redis, Dex, and `Application`/`AppProject` CRDs) into `argocd`.
-  * **Why it is needed:** Installs the GitOps engine inside your cluster.
-  * **Real-world production example:** In production, teams install Argo CD via the official `argo-cd` Helm chart (with HA replicas, SSO/OIDC login, and RBAC) and then let Argo CD manage itself.
+* **`kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -`**
+  * **What it does:** Idempotently creates the dedicated `argocd` namespace where Argo CD's control-plane components will run (safe to re-run if `argocd` already exists).
+  * **Why it is needed:** Plain `kubectl create namespace argocd` fails with `AlreadyExists` on re-runs; `--dry-run=client -o yaml | kubectl apply -f -` prevents that while keeping Argo CD's pods, CRDs, and secrets isolated from app namespaces (`dev`, `staging`, `prod`).
+  * **Real-world production example:** Every production cluster bootstrap script creates platform namespaces (`argocd`, `ingress-nginx`, `monitoring`) idempotently.
+* **`kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml`**
+  * **What it does:** Downloads and installs Argo CD's official `stable` manifest (API server, repo-server, application-controller, Redis, Dex, and `Application`/`AppProject` CRDs) into `argocd` using **Server-Side Apply (`--server-side`)** and **`--force-conflicts`**.
+  * **Why it is needed:**
+    * **`--server-side`:** Argo CD's CRD (`applicationsets.argoproj.io` / `applications.argoproj.io`) is larger than **262,144 bytes (256 KB)**. Regular client-side `kubectl apply` tries to save the entire YAML inside `metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]` and **crashes with `Too long: may not be more than 262144 bytes`**. Server-Side Apply lets the API server handle field-level merging without that annotation!
+    * **`--force-conflicts`:** Automatically resolves field-ownership conflicts if any Argo CD CRDs or manifests were previously applied client-side or by another tool.
+  * **Real-world production example:** Modern Helm/Argo CD/Crossplane/Prometheus Operator CRD installs in EKS/GKE always use `--server-side --force-conflicts` because large OpenAPI schemas in CRDs routinely exceed Kubernetes' 256 KB annotation limit.
 * **`kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s`**
   * **What it does:** Pauses until the `argocd-server` Pod passes its readiness probe (up to 5 minutes for first-time image pulls), then `kubectl get pods -n argocd` shows all Argo CD pods running.
   * **Why it is needed:** Prevents running `port-forward` or `get secret` before Argo CD finishes starting up.
