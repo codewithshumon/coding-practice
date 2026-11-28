@@ -1,0 +1,18 @@
+ingress:
+  host: dev-api.localtest.me
+  tlsSecretName: dev-api-tls-secret
+  limitRps: "50"
+
+pdb:
+  enabled: false
+
+hpa:
+  enabled: false
+
+services:
+  node-api:
+    replicas: 1
+  python-api:
+    replicas: 1
+  go-api:
+    replicas: 1
